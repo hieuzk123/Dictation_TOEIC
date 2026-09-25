@@ -2,6 +2,7 @@ package com.toeic.dictation.controller;
 
 import com.toeic.dictation.dto.auth.AuthResponse;
 import com.toeic.dictation.dto.auth.LoginRequest;
+import com.toeic.dictation.dto.auth.RefreshTokenRequest;
 import com.toeic.dictation.dto.auth.RegisterRequest;
 import com.toeic.dictation.dto.auth.UserProfileDto;
 import com.toeic.dictation.service.AuthService;
@@ -29,6 +30,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthResponse response = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(response);
     }
 

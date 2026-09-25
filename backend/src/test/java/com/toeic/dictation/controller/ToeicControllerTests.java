@@ -49,6 +49,33 @@ public class ToeicControllerTests {
     }
 
     @Test
+    @DisplayName("Should filter audio items by search keyword")
+    void testGetItemsFilteredBySearch() throws Exception {
+        mockMvc.perform(get("/api/tests/1/items?search=Airport"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Airport Flight Delay Announcement"))
+                .andExpect(jsonPath("$[0].part").value(4));
+    }
+
+    @Test
+    @DisplayName("Should filter audio items by part and search keyword")
+    void testGetItemsFilteredByPartAndSearch() throws Exception {
+        mockMvc.perform(get("/api/tests/1/items?part=3&search=office"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Office Supply Toner Order"));
+    }
+
+    @Test
+    @DisplayName("Should return empty list when filter does not match")
+    void testGetItemsSearchNoMatch() throws Exception {
+        mockMvc.perform(get("/api/tests/1/items?part=4&search=office"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
     @DisplayName("Should return detailed item with parsed segments and tokens")
     void testGetItemDetail() throws Exception {
         mockMvc.perform(get("/api/items/1"))

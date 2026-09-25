@@ -50,19 +50,20 @@ public class ToeicService {
     }
 
     @Transactional(readOnly = true)
-    public List<AudioItemSummaryDto> getItemsByTest(Long testId, Integer part) {
+    public List<AudioItemSummaryDto> getItemsByTest(Long testId, Integer part, String search) {
         if (!toeicTestRepository.existsById(testId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Test not found with id: " + testId);
         }
 
-        List<AudioItem> items;
-        if (part != null) {
-            items = audioItemRepository.findByTestIdAndPartOrderByItemNumberAsc(testId, part);
-        } else {
-            items = audioItemRepository.findByTestIdOrderByPartAscItemNumberAsc(testId);
-        }
+        String searchPattern = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        List<AudioItem> items = audioItemRepository.findItemsWithFilter(testId, part, searchPattern);
 
         return items.stream().map(this::mapToSummaryDto).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<AudioItemSummaryDto> getItemsByTest(Long testId, Integer part) {
+        return getItemsByTest(testId, part, null);
     }
 
     @Transactional(readOnly = true)

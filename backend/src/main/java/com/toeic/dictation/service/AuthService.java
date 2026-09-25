@@ -43,9 +43,11 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         String token = tokenProvider.generateToken(savedUser.getUsername(), savedUser.getRole());
+        String refreshToken = tokenProvider.generateRefreshToken(savedUser.getUsername());
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .id(savedUser.getId())
                 .username(savedUser.getUsername())
@@ -64,9 +66,35 @@ public class AuthService {
         }
 
         String token = tokenProvider.generateToken(user.getUsername(), user.getRole());
+        String refreshToken = tokenProvider.generateRefreshToken(user.getUsername());
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole())
+                .build();
+    }
+
+    public AuthResponse refreshToken(String refreshToken) {
+        if (refreshToken == null || !tokenProvider.validateToken(refreshToken) || !tokenProvider.isRefreshToken(refreshToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
+        }
+
+        String username = tokenProvider.getUsernameFromToken(refreshToken);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        String newToken = tokenProvider.generateToken(user.getUsername(), user.getRole());
+        String newRefreshToken = tokenProvider.generateRefreshToken(user.getUsername());
+
+        return AuthResponse.builder()
+                .token(newToken)
+                .refreshToken(newRefreshToken)
                 .tokenType("Bearer")
                 .id(user.getId())
                 .username(user.getUsername())

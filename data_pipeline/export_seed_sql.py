@@ -52,6 +52,11 @@ def main():
             )
             tests_map[test_key] = True
 
+    sql_statements.append("")
+    sql_statements.append("-- Clear existing items and segments for idempotent re-runs")
+    sql_statements.append("DELETE FROM `audio_segments`;")
+    sql_statements.append("DELETE FROM `audio_items`;")
+
         part = data["part"]
         item_number = data["item_number"]
         title = data["title"]

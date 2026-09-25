@@ -4,6 +4,7 @@ import { useAudioSegmentPlayer } from '../hooks/useAudioSegmentPlayer';
 import { AudioPlayerBar } from './AudioPlayerBar';
 import { ModeSelector } from './ModeSelector';
 import { SegmentNav } from './SegmentNav';
+import { storage } from '../services/storage';
 import {
   Eye,
   EyeOff,
@@ -13,18 +14,21 @@ import {
   ArrowRight,
   Send,
   User as SpeakerIcon,
+  RotateCcw,
 } from 'lucide-react';
 
 interface DictationPlayerProps {
   item: AudioItemDetail;
   onFinishSession: (submission: SubmitStudyRequest) => void;
   onBack: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 export const DictationPlayer: React.FC<DictationPlayerProps> = ({
   item,
   onFinishSession,
   onBack,
+  onOpenShortcuts,
 }) => {
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(0);
   const [mode, setMode] = useState<DictationMode>('MEDIUM');
@@ -32,6 +36,68 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
   const [fullTextInputs, setFullTextInputs] = useState<Record<number, string>>({});
   const [checkedSegmentIds, setCheckedSegmentIds] = useState<Set<number>>(new Set());
   const [revealedSegmentIds, setRevealedSegmentIds] = useState<Set<number>>(new Set());
+  const [draftSavedTime, setDraftSavedTime] = useState<string | null>(null);
+
+  // Initialize from LocalStorage draft if exists
+  useEffect(() => {
+    const draft = storage.getDraft(item.id);
+    if (draft) {
+      if (draft.mode) setMode(draft.mode);
+      if (typeof draft.activeSegmentIndex === 'number' && draft.activeSegmentIndex < item.segments.length) {
+        setActiveSegmentIndex(draft.activeSegmentIndex);
+      }
+      if (draft.userInputs) setUserInputs(draft.userInputs);
+      if (draft.fullTextInputs) setFullTextInputs(draft.fullTextInputs);
+      if (draft.checkedSegmentIds) setCheckedSegmentIds(new Set(draft.checkedSegmentIds));
+      if (draft.revealedSegmentIds) setRevealedSegmentIds(new Set(draft.revealedSegmentIds));
+
+      const timeStr = new Date(draft.updatedAt).toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      setDraftSavedTime(timeStr);
+    }
+  }, [item.id, item.segments.length]);
+
+  // Debounced auto-save to LocalStorage whenever inputs change
+  useEffect(() => {
+    const hasAnyInput =
+      Object.keys(userInputs).length > 0 ||
+      Object.keys(fullTextInputs).length > 0 ||
+      checkedSegmentIds.size > 0;
+
+    if (!hasAnyInput) return;
+
+    const timer = setTimeout(() => {
+      storage.saveDraft(item.id, {
+        mode,
+        activeSegmentIndex,
+        userInputs,
+        fullTextInputs,
+        checkedSegmentIds,
+        revealedSegmentIds,
+      });
+      const timeStr = new Date().toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      setDraftSavedTime(timeStr);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [item.id, mode, activeSegmentIndex, userInputs, fullTextInputs, checkedSegmentIds, revealedSegmentIds]);
+
+  const handleResetSession = () => {
+    if (confirm('Bạn có chắc chắn muốn xóa bản nháp và làm lại từ đầu không?')) {
+      storage.clearDraft(item.id);
+      setUserInputs({});
+      setFullTextInputs({});
+      setCheckedSegmentIds(new Set());
+      setRevealedSegmentIds(new Set());
+      setActiveSegmentIndex(0);
+      setDraftSavedTime(null);
+    }
+  };
 
   const currentSegment = item.segments[activeSegmentIndex] || item.segments[0];
 
@@ -156,6 +222,7 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
         answers,
       };
 
+      storage.clearDraft(item.id);
       onFinishSession(submission);
     }
   };
@@ -181,6 +248,13 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
       if (e.ctrlKey && e.code === 'Space') {
         e.preventDefault();
         togglePlay();
+        return;
+      }
+
+      // Ctrl + H toggles reveal answer
+      if (e.ctrlKey && (e.key === 'h' || e.key === 'H')) {
+        e.preventDefault();
+        handleToggleReveal();
         return;
       }
 
@@ -229,17 +303,49 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
-      {/* Top Bar: Back & Mode Selector */}
+      {/* Top Bar: Back, Shortcuts, Auto-save Badge & Mode Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors self-start"
-        >
-          &larr; Chọn bài khác
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
+          >
+            &larr; Chọn bài khác
+          </button>
 
-        <ModeSelector currentMode={mode} onChangeMode={setMode} disabled={isChecked} />
+          {onOpenShortcuts && (
+            <button
+              type="button"
+              onClick={onOpenShortcuts}
+              className="flex items-center gap-1 text-[11px] font-semibold text-brand-400 hover:text-brand-300 px-2.5 py-1 rounded-lg bg-brand-500/10 border border-brand-500/20 transition-all hover:bg-brand-500/20"
+              title="Xem bảng phím tắt & hướng dẫn"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Phím tắt</span>
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {draftSavedTime && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-400 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Tự động lưu vào trình duyệt"></span>
+              <span className="hidden sm:inline">Lưu nháp: {draftSavedTime}</span>
+              <button
+                type="button"
+                onClick={handleResetSession}
+                className="text-slate-400 hover:text-rose-400 font-medium flex items-center gap-1 ml-1 pl-2 border-l border-slate-800 transition-colors"
+                title="Xóa nháp và làm lại từ đầu"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span className="hidden md:inline">Làm lại</span>
+              </button>
+            </div>
+          )}
+
+          <ModeSelector currentMode={mode} onChangeMode={setMode} disabled={isChecked} />
+        </div>
       </div>
 
       {/* Segment Navigation */}

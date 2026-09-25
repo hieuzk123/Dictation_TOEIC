@@ -1,7 +1,7 @@
 # TRẠNG THÁI DỰ ÁN: TOEIC DICTATION (PART 3 & 4)
 > **Tài liệu bàn giao & Hướng dẫn phát triển đa môi trường**  
 > *Repository*: [hieuzk123/Dictation_TOEIC](https://github.com/hieuzk123/Dictation_TOEIC)  
-> *Cập nhật lần cuối*: 2026-09-25
+> *Cập nhật lần cuối*: 2026-09-26  
 
 ---
 
@@ -200,10 +200,10 @@ Thư mục dự kiến: `frontend/`
 > **Mục tiêu: Đưa dự án từ mức ứng dụng demo/PoC thành một Sản phẩm EdTech thương mại hoàn chỉnh (Production-Ready Digital Product) theo chu trình 7 bước.**
 
 #### 🚀 Giai đoạn 4: Trải nghiệm & Độ bền Sản phẩm (Product & UX Resilience)
-- [ ] Task 4.1: Cơ chế Tự động lưu tiến độ làm bài (`Auto-save LocalStorage`): chống mất bài khi rớt mạng hoặc người học vô tình tải lại trang.
-- [ ] Task 4.2: Hướng dẫn Tân thủ (`Onboarding Guide` & `Shortcut Cheatsheet Modal`): giới thiệu trực quan cách nghe, bấm phím tắt khi học viên lần đầu vào web.
-- [ ] Task 4.3: Cơ chế Bảo mật Nâng cao (`JWT Refresh Token & Token Rotation`): tự động cấp mới phiên đăng nhập nền mà không ngắt quãng buổi học.
-- [ ] Task 4.4: Phân trang & Tìm kiếm bài nghe (`Pagination & Search/Filter`): hỗ trợ mở rộng kho đề thi từ hàng chục lên hàng trăm đề.
+- [x] Task 4.1: Cơ chế Tự động lưu tiến độ làm bài (`Auto-save LocalStorage`): chống mất bài khi rớt mạng hoặc người học vô tình tải lại trang (Hoàn thành `services/storage.ts` với TTL 7 ngày, khôi phục tự động, badge hiển thị trạng thái và nút làm lại).
+- [x] Task 4.2: Hướng dẫn Tân thủ (`Onboarding Guide` & `Shortcut Cheatsheet Modal`): giới thiệu trực quan cách nghe, bấm phím tắt khi học viên lần đầu vào web (Hoàn thành `ShortcutModal.tsx`, tự động mở cho tân thủ, hỗ trợ tabs Phím tắt & Hướng dẫn).
+- [x] Task 4.3: Cơ chế Bảo mật Nâng cao (`JWT Refresh Token & Token Rotation`): tự động cấp mới phiên đăng nhập nền mà không ngắt quãng buổi học (Hoàn thành Refresh Token 7 ngày với claim `typ: refresh`, endpoint `/api/auth/refresh`, silent refresh interceptor phía frontend và 3 unit/integration tests bảo mật).
+- [x] Task 4.4: Phân trang & Tìm kiếm bài nghe (`Pagination & Search/Filter`): hỗ trợ mở rộng kho đề thi từ hàng chục lên hàng trăm đề (Hoàn thành thanh tìm kiếm tiêu đề/mã câu, tabs lọc Part 3/4, pagination responsive trên giao diện và backend JPQL query filter).
 
 #### 🧪 Giai đoạn 5: Kiểm thử Tự động & Đo lường Chất lượng (Testing & Engineering Quality)
 - [ ] Task 5.1: Bộ kiểm thử tự động Frontend (`Vitest` + `React Testing Library`): viết unit test cho các component cốt lõi `DictationPlayer`, `AudioPlayerBar`, `useAudioSegmentPlayer`.
@@ -243,6 +243,9 @@ Thư mục dự kiến: `frontend/`
 | AUD-10 | Phase 3 Task 4: Segment Boundary Playback Clamp | Primary Agent (Phase 3 Task 4) | Auditor Agent | Khi người dùng ấn nút tua lùi/tới hoặc seek trên timeline, audio có nguy cơ trôi sang segment khác. | 🟡 Important | Giới hạn tuyệt đối phạm vi seek trong khoảng `[startTime, endTime]` bằng `Math.min(Math.max(...))` và reset thời gian khi đổi câu. Re-build hoàn tất trong 788ms. | ✅ PASS (Resolved) |
 | AUD-11 | Phase 3 Task 5: Hotkeys Input Focus Guard | Primary Agent (Phase 3 Task 5) | Auditor Agent | Phím tắt `Space` nếu bắt sự kiện toàn cục sẽ vô tình kích hoạt play/pause âm thanh khi người dùng đang gõ khoảng trắng vào ô nhập câu trả lời. | 🟡 Important | Kiểm tra `e.target instanceof HTMLInputElement || HTMLTextAreaElement`. Nếu đang gõ text, phím Space trả về ký tự bình thường; chỉ toggle play khi không focus input hoặc khi bấm `Ctrl + Space`. | ✅ PASS (Resolved) |
 | AUD-12 | Phase 3 Task 6: Google Password Breach Popup Guard | Primary Agent (Phase 3 Task 6) | Auditor Agent | Mật khẩu mẫu `password123` bị Google Password Manager trên Chrome cảnh báo lộ lọt dữ liệu (data breach), hiện popup hệ thống chặn tương tác người dùng. | 🔴 Critical | Đã nâng cấp mật khẩu sang dạng mạnh `ToeicDictation@2026!`, đồng bộ hash BCrypt `$2a$10$RHOVgcGaCuoE3uolCR9lZeiAu0BKT1n7/orsJ.9us38snsjW4.4iy` vào MySQL, `seed_data.sql` và `AuthModal.tsx`. | ✅ PASS (Resolved) |
+| AUD-13 | Cross-Phase: Password Sync & Seed Idempotency | Primary Agent (Phase 4 Init) | Auditor Agent | Khi chạy lại test suite trên máy mới, AuthControllerTests và StudyControllerTests vẫn dùng mật khẩu cũ `password123` (lỗi 401), đồng thời việc nạp lại seed_data sinh trùng lặp audio items (đếm size 4 thay vì 2). | 🟡 Important | Đã đồng bộ `ToeicDictation@2026!` vào các file test, bổ sung `ALTER TABLE AUTO_INCREMENT = 1` và `DELETE` statements trong `seed_data.sql` & `export_seed_sql.py`. Toàn bộ 24/24 tests backend PASS và frontend build sạch. | ✅ PASS (Resolved) |
+| AUD-14 | Phase 4 Task 4.3: JWT Refresh Token Hijack Prevention | Primary Agent (Task 4.3) | Auditor Agent | Cần bảo đảm refresh token và access token không thể dùng lẫn lộn (Access Token không được phép dùng để gọi `/api/auth/refresh` và Refresh Token không được phép dùng để truy cập API nghiệp vụ). | 🔴 Critical | Đã gán claim tường minh `typ: access` và `typ: refresh`, thêm method xác thực `isRefreshToken()` trong `JwtTokenProvider` và bổ sung test `testRefreshTokenWithAccessTokenRejected` (trả về 401 Unauthorized khi tráo token). Đã pass 3/3 test cases mới. | ✅ PASS (Resolved) |
+| AUD-15 | Phase 4 Task 4.4: Type Safety in Search Filter | Primary Agent (Task 4.4) | Auditor Agent | Lỗi TypeScript `TS2339` khi gọi `.toLowerCase()` trên trường `itemNumber` của `AudioItemSummary` do kiểu dữ liệu là number. | 🟢 Minor | Sử dụng `String(item.itemNumber).includes(query)` đảm bảo an toàn kiểu dữ liệu tuyệt đối và tìm kiếm được cả mã số câu (vd "32-34", 1, 2...). Frontend build hoàn thành trong 797ms. | ✅ PASS (Resolved) |
 
 
 

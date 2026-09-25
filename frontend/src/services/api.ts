@@ -12,15 +12,58 @@ import type {
 } from '../types';
 
 const TOKEN_KEY = 'toeic_dictation_token';
+const REFRESH_TOKEN_KEY = 'toeic_dictation_refresh_token';
 
 export const tokenStorage = {
   get: (): string | null => localStorage.getItem(TOKEN_KEY),
-  set: (token: string): void => localStorage.setItem(TOKEN_KEY, token),
-  remove: (): void => localStorage.removeItem(TOKEN_KEY),
+  getRefreshToken: (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY),
+  set: (token: string, refreshToken?: string): void => {
+    localStorage.setItem(TOKEN_KEY, token);
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+  },
+  remove: (): void => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  },
 };
 
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function performTokenRefresh(): Promise<string | null> {
+  const refreshToken = tokenStorage.getRefreshToken();
+  if (!refreshToken) {
+    tokenStorage.remove();
+    return null;
+  }
+
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!res.ok) {
+      tokenStorage.remove();
+      return null;
+    }
+
+    const data: AuthResponse = await res.json();
+    tokenStorage.set(data.token, data.refreshToken);
+    return data.token;
+  } catch {
+    tokenStorage.remove();
+    return null;
+  }
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = tokenStorage.get();
+  let token = tokenStorage.get();
   
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
@@ -29,10 +72,40 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(endpoint, {
+  let response = await fetch(endpoint, {
     ...options,
     headers,
   });
+
+  // If 401 and not an authentication endpoint, attempt silent refresh once
+  if (
+    response.status === 401 &&
+    !endpoint.startsWith('/api/auth/login') &&
+    !endpoint.startsWith('/api/auth/register') &&
+    !endpoint.startsWith('/api/auth/refresh')
+  ) {
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (refreshToken) {
+      if (!isRefreshing) {
+        isRefreshing = true;
+        refreshPromise = performTokenRefresh().finally(() => {
+          isRefreshing = false;
+          refreshPromise = null;
+        });
+      }
+
+      const newToken = await refreshPromise;
+      if (newToken) {
+        const retryHeaders = new Headers(options.headers || {});
+        retryHeaders.set('Content-Type', 'application/json');
+        retryHeaders.set('Authorization', `Bearer ${newToken}`);
+        response = await fetch(endpoint, {
+          ...options,
+          headers: retryHeaders,
+        });
+      }
+    }
+  }
 
   if (!response.ok) {
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -45,6 +118,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
     if (response.status === 401) {
       tokenStorage.remove();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('toeic:auth-expired'));
+      }
     }
 
     throw new Error(errorMessage);
@@ -74,6 +150,13 @@ export const api = {
       });
     },
 
+    refreshToken: (refreshToken: string): Promise<AuthResponse> => {
+      return request<AuthResponse>('/api/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+      });
+    },
+
     getMe: (): Promise<User> => {
       return request<User>('/api/auth/me');
     },
@@ -84,8 +167,11 @@ export const api = {
       return request<ToeicTest[]>('/api/tests');
     },
 
-    getTestItems: (testId: number, part?: number): Promise<AudioItemSummary[]> => {
-      const query = part ? `?part=${part}` : '';
+    getTestItems: (testId: number, part?: number, search?: string): Promise<AudioItemSummary[]> => {
+      const params = new URLSearchParams();
+      if (part) params.append('part', part.toString());
+      if (search && search.trim()) params.append('search', search.trim());
+      const query = params.toString() ? `?${params.toString()}` : '';
       return request<AudioItemSummary[]>(`/api/tests/${testId}/items${query}`);
     },
 

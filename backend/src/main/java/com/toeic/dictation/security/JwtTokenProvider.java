@@ -19,8 +19,13 @@ public class JwtTokenProvider {
     @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration-ms:604800000}")
+    // Access token valid for 1 hour (3600000 ms)
+    @Value("${jwt.expiration-ms:3600000}")
     private long jwtExpirationMs;
+
+    // Refresh token valid for 7 days (604800000 ms)
+    @Value("${jwt.refresh-expiration-ms:604800000}")
+    private long jwtRefreshExpirationMs;
 
     private SecretKey key;
 
@@ -36,6 +41,20 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(username)
                 .claim("role", role)
+                .claim("typ", "access")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+
+    public String generateRefreshToken(String username) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtRefreshExpirationMs);
+
+        return Jwts.builder()
+                .subject(username)
+                .claim("typ", "refresh")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -50,6 +69,19 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.getSubject();
+    }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return "refresh".equals(claims.get("typ"));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public boolean validateToken(String token) {

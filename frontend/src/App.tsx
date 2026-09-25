@@ -6,6 +6,8 @@ import { AuthModal } from './components/AuthModal';
 import { DictationPlayer } from './components/DictationPlayer';
 import { ResultModal } from './components/ResultModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
+import { ShortcutModal } from './components/ShortcutModal';
+import { storage } from './services/storage';
 import { api } from './services/api';
 import type {
   ToeicTest,
@@ -30,6 +32,14 @@ function DictationApp() {
   const [studyResult, setStudyResult] = useState<SubmitStudyResponse | null>(null);
   const [isSubmittingStudy, setIsSubmittingStudy] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+
+  // Check first-time onboarding prompt
+  useEffect(() => {
+    if (!storage.isOnboardingSeen()) {
+      setIsShortcutsOpen(true);
+    }
+  }, []);
 
   // Load tests on mount
   useEffect(() => {
@@ -123,6 +133,7 @@ function DictationApp() {
       <Navbar
         onHomeClick={handleBackToTests}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -137,6 +148,7 @@ function DictationApp() {
             item={selectedItemDetail}
             onBack={handleBackToTests}
             onFinishSession={handleFinishSession}
+            onOpenShortcuts={() => setIsShortcutsOpen(true)}
           />
         ) : (
           /* Test & Items Browser */
@@ -187,6 +199,12 @@ function DictationApp() {
 
       {/* Auth Modal */}
       <AuthModal />
+
+      {/* Shortcut & Onboarding Modal */}
+      <ShortcutModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+      />
     </div>
   );
 }

@@ -38,7 +38,7 @@ public class StudyControllerTests {
 
     @BeforeEach
     void setUp() throws Exception {
-        LoginRequest loginReq = new LoginRequest("demo_user", "password123");
+        LoginRequest loginReq = new LoginRequest("demo_user", "ToeicDictation@2026!");
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginReq)))

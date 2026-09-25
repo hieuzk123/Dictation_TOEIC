@@ -1,14 +1,15 @@
 import React from 'react';
-import { Headphones, LogOut, History, LogIn } from 'lucide-react';
+import { Headphones, LogOut, History, LogIn, HelpCircle } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   onOpenHistory?: () => void;
   onHomeClick?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenHistory, onHomeClick }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenHistory, onHomeClick, onOpenShortcuts }) => {
   const { user, logout, openAuthModal } = useAuth();
 
   return (
@@ -39,6 +40,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenHistory, onHomeClick }) =>
 
         {/* Right Actions */}
         <div className="flex items-center gap-3">
+          {/* Shortcuts & Guide Button */}
+          {onOpenShortcuts && (
+            <button
+              onClick={onOpenShortcuts}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition-all active:scale-95"
+              title="Hướng dẫn & Phím tắt (Hotkeys)"
+            >
+              <HelpCircle className="w-4 h-4 text-brand-400" />
+              <span className="hidden sm:inline">Phím tắt & Hướng dẫn</span>
+            </button>
+          )}
+
           {/* History Button */}
           {user && (
             <button

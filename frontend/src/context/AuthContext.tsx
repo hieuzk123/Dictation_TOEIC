@@ -46,11 +46,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     initAuth();
+
+    const handleAuthExpired = () => {
+      setUser(null);
+      setToken(null);
+      setIsAuthModalOpen(true);
+    };
+
+    window.addEventListener('toeic:auth-expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('toeic:auth-expired', handleAuthExpired);
+    };
   }, []);
 
   const login = async (credentials: LoginRequest) => {
     const res = await api.auth.login(credentials);
-    tokenStorage.set(res.token);
+    tokenStorage.set(res.token, res.refreshToken);
     setToken(res.token);
     const userObj: User = {
       id: res.id,
@@ -65,7 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (data: RegisterRequest) => {
     const res = await api.auth.register(data);
-    tokenStorage.set(res.token);
+    tokenStorage.set(res.token, res.refreshToken);
     setToken(res.token);
     const userObj: User = {
       id: res.id,

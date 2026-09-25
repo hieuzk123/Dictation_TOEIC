@@ -26,8 +26,9 @@ public class ToeicController {
     @GetMapping("/tests/{testId}/items")
     public ResponseEntity<List<AudioItemSummaryDto>> getItemsByTest(
             @PathVariable Long testId,
-            @RequestParam(required = false) Integer part) {
-        List<AudioItemSummaryDto> items = toeicService.getItemsByTest(testId, part);
+            @RequestParam(required = false) Integer part,
+            @RequestParam(required = false) String search) {
+        List<AudioItemSummaryDto> items = toeicService.getItemsByTest(testId, part, search);
         return ResponseEntity.ok(items);
     }
 

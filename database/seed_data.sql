@@ -12,6 +12,12 @@ ON DUPLICATE KEY UPDATE `password`=VALUES(`password`), `full_name`=VALUES(`full_
 -- Insert Test: ETS 2024 - Test 1
 INSERT INTO `toeic_tests` (`year`, `test_number`, `title`, `description`) VALUES ('ETS 2024', 1, 'ETS 2024 - Test 1', 'Official ETS Practice Test') ON DUPLICATE KEY UPDATE `title`=VALUES(`title`);
 
+-- Clear existing items and segments for idempotent re-runs
+DELETE FROM `audio_segments`;
+DELETE FROM `audio_items`;
+ALTER TABLE `audio_items` AUTO_INCREMENT = 1;
+ALTER TABLE `audio_segments` AUTO_INCREMENT = 1;
+
 -- Insert Audio Item: Office Supply Toner Order (Part 3 32-34)
 INSERT INTO `audio_items` (`test_id`, `part`, `item_number`, `title`, `audio_url`, `total_duration`, `total_segments`) SELECT `id`, 3, '32-34', 'Office Supply Toner Order', '/audio/ets2024_test1_part3_q32_34.mp3', 31.42, 7 FROM `toeic_tests` WHERE `year`='ETS 2024' AND `test_number`=1;
 SET @item_id = LAST_INSERT_ID();
