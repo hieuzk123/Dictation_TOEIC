@@ -11,6 +11,8 @@
 - Task 3: complete (Spring Security 6 stateless JWT filter, register, login, me endpoints. 6/6 controller tests passing. Auditor review clean with AUD-03 resolved.)
 - Task 4: complete (ToeicController tests, items, and segments endpoints with token JSON parser, WebMvcConfig static audio streaming. 5/5 tests passing. Auditor review clean with AUD-04 resolved.)
 - Task 5: complete (DictationScoringService normalization & accuracy calculation, StudyService submit and history tracking, StudyController endpoints. 7/7 tests passing. Auditor review clean with AUD-05 resolved.)
+- Task 6: complete (EndToEndApiIntegrationTests covering complete user journey: register -> login -> get tests -> get item/audio -> submit dictation -> view history. Full test suite 24/24 tests passing. Auditor review clean with AUD-06 resolved. Phase 2 Backend 100% COMPLETE.)
+
 
 
 
