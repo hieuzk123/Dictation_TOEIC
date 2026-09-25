@@ -7,4 +7,6 @@
 
 ## Task Log
 - Task 1: complete (Spring Boot 3.3.4 project initialized with maven wrapper, MySQL connection, JPA validate mode, JJWT 0.12.6, Lombok, security. Tests passing in 6s. Auditor review clean with AUD-01 resolved.)
+- Task 2: complete (5 JPA domain entities User, ToeicTest, AudioItem, AudioSegment, StudyHistory and 5 repositories created. 4/4 integration tests passing against live MySQL database. Auditor review clean with AUD-02 resolved.)
+
 
