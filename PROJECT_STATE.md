@@ -121,40 +121,56 @@ Dictation_TOEIC/
 
 ---
 
-## 5. Hướng dẫn thiết lập khi kéo code về máy khác
+## 5. Hướng dẫn thiết lập & Bàn giao khi kéo code về máy khác (Handover Guide)
 
-Khi bạn chuyển sang máy tính khác (laptop, máy cơ quan, v.v.):
+Khi bạn chuyển sang máy tính khác (laptop cá nhân, máy công ty, máy ảo, v.v.), hãy thực hiện theo đúng các bước tuần tự dưới đây để đảm bảo hệ thống chạy ngay mà không bị lệch tiến trình:
 
-### Bước 1: Clone Repository
+### 📥 Bước 1: Kéo mã nguồn về máy mới
 ```bash
 git clone https://github.com/hieuzk123/Dictation_TOEIC.git
 cd Dictation_TOEIC
 ```
 
-### Bước 2: Chuẩn bị môi trường phần mềm
-* **Git** & **Node.js** (>= 18)
-* **JDK 17/21** (Java LTS)
-* **MySQL 8.x** (chạy dịch vụ MySQL trên cổng 3306)
-* **Python 3.10+** (nếu muốn chạy tiếp Data Pipeline cho các đề mới)
+### ⚙️ Bước 2: Chuẩn bị môi trường phần mềm
+* **Git** & **Node.js** (LTS >= 18 hoặc 20+)
+* **JDK 17 hoặc 21 LTS** (Khuyên dùng OpenJDK 21)
+* **MySQL 8.x** hoặc **XAMPP (MariaDB/MySQL)** trên cổng 3306
+* **Python 3.10+** (Chỉ cần nếu muốn nạp thêm đề thi mới qua Whisper)
 
-### Bước 3: Nạp Database vào MySQL
-Mở terminal hoặc MySQL Workbench, kết nối vào MySQL cục bộ và chạy:
-```bash
-# 1. Tạo schema
-mysql -u root -p < database/schema.sql
+### 🗄️ Bước 3: Khởi động & Nạp Cơ sở dữ liệu
+1. **Khởi động MySQL**:
+   * Nếu dùng Windows: Nhấp đúp chạy script tiện ích `start_mysql.bat` (tự động nhận diện XAMPP `D:\xampp\mysql` hoặc MySQL standalone).
+   * Hoặc khởi động MySQL Service qua XAMPP Control Panel / Services.msc.
+2. **Nạp Schema & Dữ liệu mẫu**:
+   ```powershell
+   # Mở terminal tại thư mục gốc Dictation_TOEIC:
+   Get-Content database/schema.sql | mysql -u root
+   Get-Content database/seed_data.sql | mysql -u root toeic_dictation
+   ```
+   *(Tài khoản mẫu đã nạp sẵn: `demo_user` / `ToeicDictation@2026!`)*
 
-# 2. Nạp dữ liệu mẫu
-mysql -u root -p toeic_dictation < database/seed_data.sql
+### ☕ Bước 4: Khởi động Backend Spring Boot 3
+```powershell
+cd backend
+# Windows:
+.\mvnw.cmd spring-boot:run
+# macOS / Linux:
+./mvnw spring-boot:run
 ```
-*(Nếu dùng Windows và user `root` không có mật khẩu, bỏ tham số `-p`).*
+*Backend sẽ lắng nghe tại `http://localhost:8080`, cung cấp REST API và audio stream `/audio/**`.*
 
-### Bước 4: Chạy Data Pipeline (Nếu cần nạp thêm đề mới)
-```bash
-cd data_pipeline
-pip install faster-whisper edge-tts
-python align_pipeline.py
-python export_seed_sql.py
+### ⚛️ Bước 5: Khởi động Frontend React 18 + Vite
+Mở một cửa sổ terminal mới:
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
+*Mở trình duyệt truy cập `http://localhost:5173` (hoặc `http://localhost:5174`), đăng nhập bằng nút tiện ích Demo để trải nghiệm ngay.*
+
+### 🤖 Bước 6: Cách ra lệnh cho AI Agent trên máy mới để KHÔNG làm sai tiến trình
+Khi bạn mở dự án trên IDE ở máy mới (hoặc bắt đầu session mới với AI), hãy dán câu lệnh tiêu chuẩn sau vào ô chat:
+> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án đã hoàn thành 100% Giai đoạn 1 (Data Pipeline & Seed Data), Giai đoạn 2 (Backend Spring Boot 3 & 24/24 Tests), và Giai đoạn 3 (Frontend React 18 + Audio Player + Dictation Workspace). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và tiếp tục triển khai các nhiệm vụ tiếp theo ở Mục 6 (Giai đoạn 4 trở đi)."*
 
 ---
 
