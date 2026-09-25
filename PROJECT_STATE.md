@@ -16,16 +16,45 @@ Hệ thống website hỗ trợ học viên luyện nghe chép chính tả tiế
 
 ---
 
-## 2. Những công việc đã hoàn thành (Phase 1)
+## 2. Tiêu chuẩn Phối hợp Đa Tác tử & Rà soát Lỗi Xuyên suốt (Multi-Agent Quality Protocol)
+> **Quy định cốt lõi bắt buộc áp dụng xuyên suốt tất cả các giai đoạn của dự án**
+
+Hệ thống phát triển được phân định rành mạch giữa các nhóm Tác tử (Agents) để bảo đảm tối đa tính chính xác, tính bảo mật và chất lượng mã nguồn:
+
+### 1. Phân vai Tác tử (Agent Roles):
+* **Agent chính (Primary / Implementer Agent)**:
+  * Trực tiếp thực thi các nhiệm vụ kỹ thuật: khởi tạo project, lập trình logic tính năng, thiết kế models/controllers, viết test cases, cấu hình môi trường...
+  * Tuân thủ quy trình kiểm thử trước khi bàn giao: tự chạy unit test, build cục bộ để xác nhận không có lỗi cú pháp hoặc runtime cơ bản.
+  * Xuất báo cáo kết quả thực thi kèm danh sách file thay đổi, diff mã nguồn và kết quả test suite.
+* **Agent phụ (Secondary / Auditor & Reviewer Agent)**:
+  * Đóng vai trò kiểm toán chất lượng độc lập, rà soát chi tiết thành phẩm của Agent chính ngay sau khi hoàn thành mỗi task.
+  * Tiêu chí kiểm định chuyên sâu:
+    1. **Spec Compliance**: Đối chiếu với `PROJECT_STATE.md`, Master Prompt và database schema xem có thiếu sót tính năng hay vi phạm quy ước nào không.
+    2. **Code Quality & Best Practices**: Kiểm tra cấu trúc code, naming conventions, xử lý exception, clean code, tái sử dụng code.
+    3. **Security & Performance**: Kiểm tra lỗ hổng bảo mật (SQL Injection, XSS, lộ credential, JWT leak, CORS cấu hình sai) và tối ưu truy vấn N+1 của JPA.
+    4. **Regressions & System Integrity**: Đảm bảo không phá vỡ logic cũ hoặc gây lỗi liên đới giữa các module.
+  * Phân loại lỗi theo 3 mức độ:
+    * 🔴 **Critical**: Lỗi nghiêm trọng khiến hệ thống không chạy được, sai logic nghiệp vụ cốt lõi hoặc lỗ hổng bảo mật.
+    * 🟡 **Important**: Vi phạm tiêu chuẩn thiết kế, thiếu sót edge cases, thiếu validation hoặc thiếu test cases quan trọng.
+    * 🟢 **Minor**: Điểm chưa tối ưu về style code, comment, format nhưng không ảnh hưởng tính năng.
+
+### 2. Chu trình Sửa lỗi & Tái kiểm định (Fix & Re-review Loop):
+1. Khi Agent phụ phát hiện lỗi 🔴 **Critical** hoặc 🟡 **Important**, Agent chính bắt buộc phải tiếp nhận phản hồi và tiến hành sửa đổi ngay lập tức.
+2. Agent phụ thực hiện rà soát lại (re-review) trên diff sửa đổi. Chỉ khi Agent phụ xác nhận **PASS (Review Clean)** thì task mới được đánh dấu hoàn thành.
+
+### 3. Bảng Tổng kết Đối soát Lỗi & Khắc phục (Defect & Remediation Audit Table):
+Mọi lỗi phát sinh trong quá trình rà soát chéo giữa các Agent đều phải được ghi nhận công khai và minh bạch vào bảng audit tại cuối tài liệu này.
+
+---
+
+## 3. Những công việc đã hoàn thành (Phase 1)
 
 ### A. Thiết lập môi trường & Công cụ hệ thống
-1. **Node.js LTS (v24.19.0)**: Đã cài đặt và nạp vào `%PATH%` (hỗ trợ npx/npm cho các công cụ Frontend và MCP).
-2. **Java Development Kit (JDK 17)**: Đã cài đặt **Eclipse Adoptium Temurin JDK 17** (`JAVA_HOME` và `%PATH%` đã sẵn sàng).
-3. **MySQL Server 8.4**:
-   * Đã cài đặt và khởi tạo vùng dữ liệu tại thư mục `C:\Users\Hieu\mysql_data` (User: `root`, Password: rỗng).
-   * Cổng mặc định: `3306`.
-   * Tạo sẵn script tiện ích bật nhanh MySQL: `start_mysql.bat`.
-   * Đã tạo cơ sở dữ liệu `toeic_dictation`.
+1. **Node.js LTS (v24.12.0)**: Đã cài đặt và nạp vào `%PATH%` (hỗ trợ npx/npm cho Frontend và công cụ hỗ trợ).
+2. **Java Development Kit (JDK 21 LTS)**: Đã cài đặt và cấu hình sẵn sàng (`java 21.0.12`).
+3. **MySQL Server (Port 3306)**:
+   * Hỗ trợ đa môi trường: Script tiện ích `start_mysql.bat` tự động phát hiện và khởi chạy MySQL (tương thích cả MySQL 8.4 standalone lẫn XAMPP MariaDB/MySQL).
+   * Đã nạp thành công database `toeic_dictation`, cấu trúc schema 5 bảng và toàn bộ seed data.
 
 ### B. Dữ liệu âm thanh & Transcript mẫu chuẩn ETS
 Đã tạo dữ liệu âm thanh chuẩn bản ngữ bằng Microsoft Azure Neural TTS (`edge-tts`):
@@ -63,14 +92,14 @@ Hệ thống website hỗ trợ học viên luyện nghe chép chính tả tiế
 
 ---
 
-## 3. Cấu trúc thư mục dự án hiện tại
+## 4. Cấu trúc thư mục dự án hiện tại
 
 ```text
 Dictation_TOEIC/
 ├── .gitignore                      # Cấu hình bỏ qua file tạm, cache, venv
-├── PROJECT_STATE.md                # Báo cáo trạng thái dự án hiện tại
+├── PROJECT_STATE.md                # Báo cáo trạng thái dự án hiện tại & Quy trình kiểm toán
 ├── toeic_dictation_prompt.md       # Master Prompt nghiệp vụ & kiến trúc ban đầu
-├── start_mysql.bat                 # Script chạy nhanh MySQL Server cục bộ
+├── start_mysql.bat                 # Script chạy nhanh MySQL Server cục bộ (đa môi trường)
 │
 ├── database/                       # Cấu trúc và dữ liệu Database
 │   ├── schema.sql                  # DDL tạo 5 bảng cơ sở dữ liệu
@@ -92,7 +121,7 @@ Dictation_TOEIC/
 
 ---
 
-## 4. Hướng dẫn thiết lập khi kéo code về máy khác
+## 5. Hướng dẫn thiết lập khi kéo code về máy khác
 
 Khi bạn chuyển sang máy tính khác (laptop, máy cơ quan, v.v.):
 
@@ -104,7 +133,7 @@ cd Dictation_TOEIC
 
 ### Bước 2: Chuẩn bị môi trường phần mềm
 * **Git** & **Node.js** (>= 18)
-* **JDK 17** hoặc mới hơn
+* **JDK 17/21** (Java LTS)
 * **MySQL 8.x** (chạy dịch vụ MySQL trên cổng 3306)
 * **Python 3.10+** (nếu muốn chạy tiếp Data Pipeline cho các đề mới)
 
@@ -129,26 +158,16 @@ python export_seed_sql.py
 
 ---
 
-## 5. Kế hoạch & Các nhiệm vụ tiếp theo (Next Tasks)
+## 6. Kế hoạch & Các nhiệm vụ tiếp theo (Next Tasks)
 
 ### 📌 Giai đoạn 2: Phát triển Backend (Spring Boot 3)
 Thư mục dự kiến: `backend/`
-- [ ] Khởi tạo dự án Spring Boot 3 bằng Maven Wrapper (`mvnw`).
-  - Dependencies: `Spring Web`, `Spring Data JPA`, `Spring Security`, `MySQL Driver`, `jjwt` (0.12.x), `Lombok`, `Validation`.
-- [ ] Cấu hình `application.yml` kết nối MySQL `toeic_dictation` và JPA Hibernate.
-- [ ] Tạo Domain Models & Repositories:
-  - `User`, `ToeicTest`, `AudioItem`, `AudioSegment`, `StudyHistory`.
-- [ ] Xây dựng Module Authentication & JWT:
-  - API `POST /api/auth/register` (mã hóa mật khẩu BCrypt).
-  - API `POST /api/auth/login` (trả về Bearer JWT Token).
-  - Security Config & JWT Authentication Filter.
-- [ ] Xây dựng RESTful API dữ liệu bài học:
-  - `GET /api/tests`: Danh sách đề thi (ETS 2024, 2023...).
-  - `GET /api/items/{id}`: Chi tiết bài nghe kèm danh sách các segments và token metadata.
-  - Phục vụ tĩnh file audio qua Resource Handler `/audio/**`.
-- [ ] Xây dựng API nộp bài & Lịch sử học tập:
-  - `POST /api/study/submit`: Nhận kết quả người dùng nhập, kiểm tra thuật toán so khớp, lưu accuracy_rate, replays_count vào `study_histories`.
-  - `GET /api/study/history`: Xem lịch sử và tiến độ học viên.
+- [ ] Task 1: Khởi tạo dự án Spring Boot 3 bằng Maven Wrapper (`mvnw`), các dependencies Web, JPA, Security, JJWT 0.12.6, cấu hình `application.yml` kết nối MySQL `toeic_dictation`.
+- [ ] Task 2: Xây dựng Domain Models & Repositories (`User`, `ToeicTest`, `AudioItem`, `AudioSegment`, `StudyHistory`).
+- [ ] Task 3: Xây dựng Module Authentication & JWT (`POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, Security Config & Filter).
+- [ ] Task 4: Xây dựng RESTful API dữ liệu bài học (`GET /api/tests`, `GET /api/items/{id}`) và Static Audio Resource Handler (`/audio/**`).
+- [ ] Task 5: Xây dựng Thuật toán chấm điểm Dictation, API nộp bài (`POST /api/study/submit`) và Lịch sử học tập (`GET /api/study/history`).
+- [ ] Task 6: Kiểm thử E2E Toàn diện Backend & Bàn giao Tài liệu API.
 
 ### 📌 Giai đoạn 3: Phát triển Frontend (React 18 + Vite + Tailwind)
 Thư mục dự kiến: `frontend/`
@@ -169,3 +188,13 @@ Thư mục dự kiến: `frontend/`
   - Nút "Hiện đáp án" khi học viên cần trợ giúp.
   - Hiển thị trực quan kết quả so khớp: màu xanh lá (từ đúng) và đỏ (từ sai).
 - [ ] Màn hình chọn đề thi, chọn Part 3 / Part 4 và bảng tổng kết điểm số / xem lại câu sai.
+
+---
+
+## 7. Nhật ký Đối soát Lỗi & Khắc phục của các Agent (Multi-Agent Defect & Remediation Audit Log)
+> **Bảng theo dõi minh bạch các lỗi/sai sót do Agent phụ phát hiện sau khi Agent chính chạy xong và phương án khắc phục.**
+
+| ID | Task / Hạng mục | Agent chính (Implementer) | Agent phụ (Auditor) | Lỗi / Điểm chưa đạt phát hiện | Mức độ | Nguyên nhân & Cách khắc phục | Trạng thái |
+|:---:|:---|:---|:---|:---|:---:|:---|:---:|
+| AUD-00 | Setup: Khởi động MySQL đa môi trường | Primary Agent (Setup) | Auditor Agent | Script `start_mysql.bat` chỉ trỏ cứng vào đường dẫn cá nhân `C:\Users\Hieu\mysql_data` gây lỗi không khởi động được trên máy khác hoặc máy dùng XAMPP. | 🟡 Important | Đã refactor `start_mysql.bat` tự động phát hiện đường dẫn XAMPP `D:\xampp\mysql` hoặc MySQL 8.4 standalone tương thích trên mọi máy. | ✅ PASS (Resolved) |
+
