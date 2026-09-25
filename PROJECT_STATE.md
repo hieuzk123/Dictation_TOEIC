@@ -180,6 +180,35 @@ Thư mục dự kiến: `frontend/`
 
 ---
 
+### 📌 Lộ trình Hoàn thiện Sản phẩm Toàn diện (Product Engineering Roadmap)
+> **Mục tiêu: Đưa dự án từ mức ứng dụng demo/PoC thành một Sản phẩm EdTech thương mại hoàn chỉnh (Production-Ready Digital Product) theo chu trình 7 bước.**
+
+#### 🚀 Giai đoạn 4: Trải nghiệm & Độ bền Sản phẩm (Product & UX Resilience)
+- [ ] Task 4.1: Cơ chế Tự động lưu tiến độ làm bài (`Auto-save LocalStorage`): chống mất bài khi rớt mạng hoặc người học vô tình tải lại trang.
+- [ ] Task 4.2: Hướng dẫn Tân thủ (`Onboarding Guide` & `Shortcut Cheatsheet Modal`): giới thiệu trực quan cách nghe, bấm phím tắt khi học viên lần đầu vào web.
+- [ ] Task 4.3: Cơ chế Bảo mật Nâng cao (`JWT Refresh Token & Token Rotation`): tự động cấp mới phiên đăng nhập nền mà không ngắt quãng buổi học.
+- [ ] Task 4.4: Phân trang & Tìm kiếm bài nghe (`Pagination & Search/Filter`): hỗ trợ mở rộng kho đề thi từ hàng chục lên hàng trăm đề.
+
+#### 🧪 Giai đoạn 5: Kiểm thử Tự động & Đo lường Chất lượng (Testing & Engineering Quality)
+- [ ] Task 5.1: Bộ kiểm thử tự động Frontend (`Vitest` + `React Testing Library`): viết unit test cho các component cốt lõi `DictationPlayer`, `AudioPlayerBar`, `useAudioSegmentPlayer`.
+- [ ] Task 5.2: Bộ kiểm thử E2E không đầu (`Playwright Test Suite`): tự động chạy giả lập luồng người dùng trên trình duyệt ngầm (Headless Chrome/Firefox).
+- [ ] Task 5.3: Đo lường độ phủ mã nguồn Backend (`JaCoCo Code Coverage >= 80%`): xuất báo cáo kiểm thử tự động HTML.
+- [ ] Task 5.4: Tiêu chuẩn hóa Git Hooks (`Husky` + `lint-staged`): tự động format code và kiểm tra type-check trước khi `git commit`.
+
+#### 🐳 Giai đoạn 6: Đóng gói Đa nền tảng & Tự động hóa Triển khai (DevOps & CI/CD)
+- [ ] Task 6.1: Container hóa đa tầng (`Dockerfile` Backend Spring Boot Java 21 & `Dockerfile` Frontend Nginx Alpine).
+- [ ] Task 6.2: Khởi chạy 1 lệnh duy nhất (`docker-compose.yml`): gom cụm `mysql`, `backend`, `frontend` độc lập, sẵn sàng chạy trên mọi VPS/Cloud (AWS, DigitalOcean).
+- [ ] Task 6.3: Quy trình Tích hợp Liên tục (`GitHub Actions CI`): tự động build, test backend & frontend khi tạo PR hoặc push code lên branch `main`.
+- [ ] Task 6.4: Quản lý biến môi trường chuẩn sản phẩm (`.env.example` và mã hóa cấu hình bảo mật).
+
+#### 📈 Giai đoạn 7: Vận hành, Giám sát & Quản trị Nội dung (Operations & Admin CMS)
+- [ ] Task 7.1: Giám sát Hiệu năng Thời gian thực (`Spring Boot Actuator` + `Prometheus Metrics`): theo dõi CPU, RAM, JVM Heap, số lượng kết nối MySQL.
+- [ ] Task 7.2: Bắt lỗi Runtime tức thì (`Sentry SDK` cho cả Frontend và Backend): cảnh báo lập tức khi có sự cố phát sinh của người dùng.
+- [ ] Task 7.3: Tự động sao lưu dữ liệu (`MySQL Auto-backup script`): cronjob định kỳ sao lưu dữ liệu học tập ra bộ nhớ ngoài an toàn.
+- [ ] Task 7.4: Màn hình Quản trị Đề thi (`Admin CMS Upload UI`): cho phép giáo viên kéo thả file MP3 + transcript trực tiếp trên web, backend tự động gọi Whisper trích xuất đề mới mà không cần gõ lệnh terminal.
+
+---
+
 ## 7. Nhật ký Đối soát Lỗi & Khắc phục của các Agent (Multi-Agent Defect & Remediation Audit Log)
 > **Bảng theo dõi minh bạch các lỗi/sai sót do Agent phụ phát hiện sau khi Agent chính chạy xong và phương án khắc phục.**
 
