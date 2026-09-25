@@ -4,9 +4,9 @@
 -- ========================================================
 USE `toeic_dictation`;
 
--- Default Demo User (password: password123, BCrypt hashed)
+-- Default Demo User (password: ToeicDictation@2026!, BCrypt hashed)
 INSERT INTO `users` (`username`, `email`, `password`, `full_name`, `role`) VALUES
-('demo_user', 'demo@example.com', '$2a$10$Q.8fdyX7UgMpu3reu03SPOk8/cTZzaKe57unrS6kIDNh.4A6My8Oq', 'Demo Learner', 'ROLE_USER')
+('demo_user', 'demo@example.com', '$2a$10$RHOVgcGaCuoE3uolCR9lZeiAu0BKT1n7/orsJ.9us38snsjW4.4iy', 'Demo Learner', 'ROLE_USER')
 ON DUPLICATE KEY UPDATE `password`=VALUES(`password`), `full_name`=VALUES(`full_name`);
 
 -- Insert Test: ETS 2024 - Test 1

@@ -171,23 +171,12 @@ Thư mục dự kiến: `backend/`
 
 ### 📌 Giai đoạn 3: Phát triển Frontend (React 18 + Vite + Tailwind)
 Thư mục dự kiến: `frontend/`
-- [ ] Khởi tạo ứng dụng React TypeScript với Vite & Tailwind CSS.
-- [ ] Thiết kế Design System hiện đại (Modern EdTech UI): tông màu Slate/Indigo/Emerald cao cấp, thanh điều khiển audio bóng bẩy (glassmorphism), typography rõ nét.
-- [ ] Phát triển Audio Controller:
-  - Phát 1 file audio duy nhất của cả Item.
-  - Xử lý mượt mà sự kiện seek đến `[start_time, end_time]` của câu hiện tại mà không phải tải nhiều file audio rời rạc.
-- [ ] Phát triển Component cốt lõi `DictationPlayer.tsx`:
-  - 3 chế độ đục lỗ:
-    - **Trung bình**: Đục lỗ 30-40% số từ (ưu tiên từ có cờ `is_keyword == true`).
-    - **Khó**: Đục lỗ 70-80% số từ hoặc chỉ hiển thị ký tự đầu tiên.
-    - **Cả câu**: Ẩn hoàn toàn câu, người dùng tự nghe và gõ toàn bộ.
-  - Hệ thống phím tắt (Hotkeys):
-    - `Space`: Phát / Nghe lại câu hiện tại.
-    - `Enter`: Nộp và kiểm tra câu trả lời.
-    - `Ctrl + Right / Left`: Chuyển nhanh câu tiếp theo / câu trước đó.
-  - Nút "Hiện đáp án" khi học viên cần trợ giúp.
-  - Hiển thị trực quan kết quả so khớp: màu xanh lá (từ đúng) và đỏ (từ sai).
-- [ ] Màn hình chọn đề thi, chọn Part 3 / Part 4 và bảng tổng kết điểm số / xem lại câu sai.
+- [x] Task 1: Khởi tạo ứng dụng React TypeScript với Vite & Tailwind CSS (Hoàn thành build sạch, design tokens glassmorphism).
+- [x] Task 2: Xây dựng API Client, TypeScript Interfaces & Auth Context (Hoàn thành AuthContext, AuthModal demo 1-click, typed API).
+- [x] Task 3: Xây dựng Test Browser & Navigation View (Hoàn thành Navbar, TestSelector, ItemCard lọc Part 3/4).
+- [x] Task 4: Phát triển Audio Controller & Glassmorphic Player (Hoàn thành hook useAudioSegmentPlayer, AudioPlayerBar seek [start, end]).
+- [x] Task 5: Phát triển Component cốt lõi DictationPlayer (3 cloze modes, hotkeys, so khớp từ tức thì).
+- [x] Task 6: Submission, Study Results Modal & Bàn giao Tổng thể (Hoàn thành ResultModal, HistoryDrawer, tích hợp đầy đủ backend và frontend).
 
 ---
 
@@ -203,6 +192,12 @@ Thư mục dự kiến: `frontend/`
 | AUD-04 | Task 4: RESTful API Dữ liệu Bài học & Static Audio | Primary Agent (Task 4) | Auditor Agent | Cần bảo đảm WebMvc ResourceHandler phân giải đúng đường dẫn tương đối `data_pipeline/sample_data/` sang URI tuyệt đối chuẩn xác trên cả Windows OS và parse token JSON an toàn. | 🟡 Important | Sử dụng `Paths.get(audioDir).toAbsolutePath().normalize().toUri()` chuẩn hóa URI cross-platform; bắt lỗi Jackson JsonProcessingException cục bộ cho từng segment. Test 5/5 pass. | ✅ PASS (Resolved) |
 | AUD-05 | Task 5: Chấm điểm Dictation & Lưu Lịch sử | Primary Agent (Task 5) | Auditor Agent | 1. Thiếu `AuthenticationEntryPoint` trong SecurityConfig khiến unauthenticated request trả về 403 Forbidden thay vì 401 Unauthorized. 2. Jackson JavaBean convention tự cắt tiền tố `is` của `isCorrect` và `isPerfect` thành `correct` và `perfect`. | 🟡 Important | Đã bổ sung `authenticationEntryPoint` trả về 401 chuẩn xác; thêm `@JsonProperty("isCorrect")` và `@JsonProperty("isPerfect")` cho DTOs kết quả. Re-test 7/7 test cases pass 100%. | ✅ PASS (Resolved) |
 | AUD-06 | Task 6: Kiểm thử E2E Toàn diện & Idempotency | Primary Agent (Task 6) | Auditor Agent | Test E2E tạo user mới nếu dùng username cố định sẽ gây lỗi trùng Unique Key khi test suite chạy nhiều lần liên tục (CI/CD hoặc local regression test). | 🟢 Minor | Sử dụng username động kèm timestamp `e2e_student_` + `System.currentTimeMillis()` bảo đảm tính độc lập (test idempotency). Toàn bộ 24/24 unit & integration tests chạy đồng thời thành công 100%. | ✅ PASS (Resolved) |
+| AUD-07 | Phase 3 Task 1: Scaffolding Tailwind CSS v3 | Primary Agent (Phase 3 Task 1) | Auditor Agent | Lệnh `npx tailwindcss init -p` gặp lỗi do npm kéo Tailwind v4 mặc định vốn đã phân tách CLI. | 🟡 Important | Đã cài đặt chuẩn xác `tailwindcss@^3.4.17` tương thích `tailwind.config.js`, cấu hình design tokens EdTech (Indigo/Slate/Emerald) và Vite proxy. Build hoàn tất thành công. | ✅ PASS (Resolved) |
+| AUD-08 | Phase 3 Task 2: VerbatimModuleSyntax Type Imports | Primary Agent (Phase 3 Task 2) | Auditor Agent | Lỗi biên dịch TypeScript `TS1484` do `tsconfig.json` bật `verbatimModuleSyntax: true` yêu cầu import kiểu dữ liệu phải dùng cú pháp `import type`. | 🟢 Minor | Chuẩn hóa toàn bộ import kiểu sang `import type { ... }` trong `AuthContext.tsx` và `api.ts`. `npm run build` hoàn thành trong 697ms không lỗi. | ✅ PASS (Resolved) |
+| AUD-09 | Phase 3 Task 3: NoUnusedLocals Compiler Check | Primary Agent (Phase 3 Task 3) | Auditor Agent | Lỗi biên dịch `TS6133` trong `Navbar.tsx` do import thừa component icon `UserIcon` chưa sử dụng. | 🟢 Minor | Đã gỡ bỏ import thừa `UserIcon`. Re-build hoàn tất trong 755ms thành công 100%. | ✅ PASS (Resolved) |
+| AUD-10 | Phase 3 Task 4: Segment Boundary Playback Clamp | Primary Agent (Phase 3 Task 4) | Auditor Agent | Khi người dùng ấn nút tua lùi/tới hoặc seek trên timeline, audio có nguy cơ trôi sang segment khác. | 🟡 Important | Giới hạn tuyệt đối phạm vi seek trong khoảng `[startTime, endTime]` bằng `Math.min(Math.max(...))` và reset thời gian khi đổi câu. Re-build hoàn tất trong 788ms. | ✅ PASS (Resolved) |
+| AUD-11 | Phase 3 Task 5: Hotkeys Input Focus Guard | Primary Agent (Phase 3 Task 5) | Auditor Agent | Phím tắt `Space` nếu bắt sự kiện toàn cục sẽ vô tình kích hoạt play/pause âm thanh khi người dùng đang gõ khoảng trắng vào ô nhập câu trả lời. | 🟡 Important | Kiểm tra `e.target instanceof HTMLInputElement || HTMLTextAreaElement`. Nếu đang gõ text, phím Space trả về ký tự bình thường; chỉ toggle play khi không focus input hoặc khi bấm `Ctrl + Space`. | ✅ PASS (Resolved) |
+| AUD-12 | Phase 3 Task 6: Google Password Breach Popup Guard | Primary Agent (Phase 3 Task 6) | Auditor Agent | Mật khẩu mẫu `password123` bị Google Password Manager trên Chrome cảnh báo lộ lọt dữ liệu (data breach), hiện popup hệ thống chặn tương tác người dùng. | 🔴 Critical | Đã nâng cấp mật khẩu sang dạng mạnh `ToeicDictation@2026!`, đồng bộ hash BCrypt `$2a$10$RHOVgcGaCuoE3uolCR9lZeiAu0BKT1n7/orsJ.9us38snsjW4.4iy` vào MySQL, `seed_data.sql` và `AuthModal.tsx`. | ✅ PASS (Resolved) |
 
 
 
