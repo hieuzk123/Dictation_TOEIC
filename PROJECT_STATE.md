@@ -165,7 +165,7 @@ Thư mục dự kiến: `backend/`
 - [x] Task 1: Khởi tạo dự án Spring Boot 3 bằng Maven Wrapper (`mvnw`), các dependencies Web, JPA, Security, JJWT 0.12.6, cấu hình `application.yml` kết nối MySQL `toeic_dictation`.
 - [x] Task 2: Xây dựng Domain Models & Repositories (`User`, `ToeicTest`, `AudioItem`, `AudioSegment`, `StudyHistory`).
 - [x] Task 3: Xây dựng Module Authentication & JWT (`POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, Security Config & Filter).
-- [ ] Task 4: Xây dựng RESTful API dữ liệu bài học (`GET /api/tests`, `GET /api/items/{id}`) và Static Audio Resource Handler (`/audio/**`).
+- [x] Task 4: Xây dựng RESTful API dữ liệu bài học (`GET /api/tests`, `GET /api/items/{id}`) và Static Audio Resource Handler (`/audio/**`).
 - [ ] Task 5: Xây dựng Thuật toán chấm điểm Dictation, API nộp bài (`POST /api/study/submit`) và Lịch sử học tập (`GET /api/study/history`).
 - [ ] Task 6: Kiểm thử E2E Toàn diện Backend & Bàn giao Tài liệu API.
 
@@ -200,6 +200,8 @@ Thư mục dự kiến: `frontend/`
 | AUD-01 | Task 1: Khởi tạo Spring Boot 3 & Cấu hình JPA | Primary Agent (Task 1) | Auditor Agent | Cảnh báo Hibernate deprecated `MySQLDialect` và thiếu cấu hình tường minh `spring.jpa.open-in-view: false` cho kiến trúc REST API không trạng thái. | 🟢 Minor | Đã gỡ bỏ dialect dư thừa (Hibernate 6 tự động nhận diện) và thêm `open-in-view: false`. Re-test ngữ cảnh pass sạch sẽ trong 6s. | ✅ PASS (Resolved) |
 | AUD-02 | Task 2: Domain Entities & Repositories | Primary Agent (Task 2) | Auditor Agent | Cần bảo đảm không bị N+1 query khi fetch AudioItem kèm các segments và tránh circular dependency khi parse JSON cho client. | 🟡 Important | Đã dùng `FetchType.LAZY` kết hợp `@JsonIgnore` trên quan hệ ngược, bổ sung custom JPQL `findByIdWithSegments` dùng `LEFT JOIN FETCH`. Integration test 4/4 pass. | ✅ PASS (Resolved) |
 | AUD-03 | Task 3: Xác thực JWT & Mật khẩu Seed User | Primary Agent (Task 3) | Auditor Agent | Hash mật khẩu demo_user trong seed_data.sql ban đầu không phải hash BCrypt chuẩn; khi update qua PowerShell bị nuốt ký tự `$` dẫn đến lỗi 401 Unauthorized khi login. | 🔴 Critical | Đã sinh lại hash BCrypt hợp lệ của `password123` bằng `BCryptPasswordEncoder`, escape ký tự `$`, cập nhật đồng bộ MySQL và seed SQL. Đã test pass 6/6 test cases. | ✅ PASS (Resolved) |
+| AUD-04 | Task 4: RESTful API Dữ liệu Bài học & Static Audio | Primary Agent (Task 4) | Auditor Agent | Cần bảo đảm WebMvc ResourceHandler phân giải đúng đường dẫn tương đối `data_pipeline/sample_data/` sang URI tuyệt đối chuẩn xác trên cả Windows OS và parse token JSON an toàn. | 🟡 Important | Sử dụng `Paths.get(audioDir).toAbsolutePath().normalize().toUri()` chuẩn hóa URI cross-platform; bắt lỗi Jackson JsonProcessingException cục bộ cho từng segment. Test 5/5 pass. | ✅ PASS (Resolved) |
+
 
 
 

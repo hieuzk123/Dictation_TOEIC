@@ -9,6 +9,8 @@
 - Task 1: complete (Spring Boot 3.3.4 project initialized with maven wrapper, MySQL connection, JPA validate mode, JJWT 0.12.6, Lombok, security. Tests passing in 6s. Auditor review clean with AUD-01 resolved.)
 - Task 2: complete (5 JPA domain entities User, ToeicTest, AudioItem, AudioSegment, StudyHistory and 5 repositories created. 4/4 integration tests passing against live MySQL database. Auditor review clean with AUD-02 resolved.)
 - Task 3: complete (Spring Security 6 stateless JWT filter, register, login, me endpoints. 6/6 controller tests passing. Auditor review clean with AUD-03 resolved.)
+- Task 4: complete (ToeicController tests, items, and segments endpoints with token JSON parser, WebMvcConfig static audio streaming. 5/5 tests passing. Auditor review clean with AUD-04 resolved.)
+
 
 
 
