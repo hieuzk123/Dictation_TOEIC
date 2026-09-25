@@ -6,8 +6,8 @@ USE `toeic_dictation`;
 
 -- Default Demo User (password: password123, BCrypt hashed)
 INSERT INTO `users` (`username`, `email`, `password`, `full_name`, `role`) VALUES
-('demo_user', 'demo@example.com', '$2a$10$7R9rWz8k3hGk5k0E5D7i4.k0m/1U5gXG7F8V2qN4Y7Q3W6Z8V2qN4', 'Demo Learner', 'ROLE_USER')
-ON DUPLICATE KEY UPDATE `full_name`=VALUES(`full_name`);
+('demo_user', 'demo@example.com', '$2a$10$Q.8fdyX7UgMpu3reu03SPOk8/cTZzaKe57unrS6kIDNh.4A6My8Oq', 'Demo Learner', 'ROLE_USER')
+ON DUPLICATE KEY UPDATE `password`=VALUES(`password`), `full_name`=VALUES(`full_name`);
 
 -- Insert Test: ETS 2024 - Test 1
 INSERT INTO `toeic_tests` (`year`, `test_number`, `title`, `description`) VALUES ('ETS 2024', 1, 'ETS 2024 - Test 1', 'Official ETS Practice Test') ON DUPLICATE KEY UPDATE `title`=VALUES(`title`);
