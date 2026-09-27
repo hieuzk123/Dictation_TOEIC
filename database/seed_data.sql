@@ -4,10 +4,11 @@
 -- ========================================================
 USE `toeic_dictation`;
 
--- Default Demo User (password: ToeicDictation@2026!, BCrypt hashed)
+-- Default Users (password: ToeicDictation@2026!, BCrypt hashed)
 INSERT INTO `users` (`username`, `email`, `password`, `full_name`, `role`) VALUES
-('demo_user', 'demo@example.com', '$2a$10$RHOVgcGaCuoE3uolCR9lZeiAu0BKT1n7/orsJ.9us38snsjW4.4iy', 'Demo Learner', 'ROLE_USER')
-ON DUPLICATE KEY UPDATE `password`=VALUES(`password`), `full_name`=VALUES(`full_name`);
+('demo_user', 'demo@example.com', '$2a$10$RHOVgcGaCuoE3uolCR9lZeiAu0BKT1n7/orsJ.9us38snsjW4.4iy', 'Demo Learner', 'ROLE_USER'),
+('admin', 'admin@example.com', '$2a$10$RHOVgcGaCuoE3uolCR9lZeiAu0BKT1n7/orsJ.9us38snsjW4.4iy', 'Admin Teacher', 'ROLE_ADMIN')
+ON DUPLICATE KEY UPDATE `password`=VALUES(`password`), `full_name`=VALUES(`full_name`), `role`=VALUES(`role`);
 
 -- Insert Test: ETS 2024 - Test 1
 INSERT INTO `toeic_tests` (`year`, `test_number`, `title`, `description`) VALUES ('ETS 2024', 1, 'ETS 2024 - Test 1', 'Official ETS Practice Test') ON DUPLICATE KEY UPDATE `title`=VALUES(`title`);

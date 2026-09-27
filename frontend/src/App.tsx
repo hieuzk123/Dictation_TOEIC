@@ -7,6 +7,7 @@ import { DictationPlayer } from './components/DictationPlayer';
 import { ResultModal } from './components/ResultModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { ShortcutModal } from './components/ShortcutModal';
+import { AdminCmsModal } from './components/AdminCmsModal';
 import { storage } from './services/storage';
 import { api } from './services/api';
 import type {
@@ -32,6 +33,7 @@ function DictationApp() {
   const [studyResult, setStudyResult] = useState<SubmitStudyResponse | null>(null);
   const [isSubmittingStudy, setIsSubmittingStudy] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
   // Check first-time onboarding prompt lazily on initial render
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(() => !storage.isOnboardingSeen());
 
@@ -122,12 +124,23 @@ function DictationApp() {
     setStudyResult(null);
   };
 
+  const handleAdminDataChanged = () => {
+    if (selectedTest) {
+      setLoadingItems(true);
+      api.toeic.getTestItems(selectedTest.id)
+        .then((data) => setItems(data))
+        .catch((err) => console.error(err))
+        .finally(() => setLoadingItems(false));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar
         onHomeClick={handleBackToTests}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -198,6 +211,13 @@ function DictationApp() {
       <ShortcutModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Admin CMS Modal */}
+      <AdminCmsModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        onDataChanged={handleAdminDataChanged}
       />
     </div>
   );

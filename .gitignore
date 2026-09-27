@@ -58,3 +58,8 @@ hs_err_pid*
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Backups & Uploads
+backups/
+*.sql.gz
+data_pipeline/sample_data/upload_*

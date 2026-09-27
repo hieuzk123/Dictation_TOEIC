@@ -139,3 +139,19 @@ export interface StudyHistory {
   completedAt: string;
   detailsJson?: string;
 }
+
+export interface AdminStats {
+  totalTests: number;
+  totalAudioItems: number;
+  totalSegments: number;
+  totalUsers: number;
+  totalStudySessions: number;
+}
+
+export interface AdminUploadResponse {
+  itemId: number;
+  title: string;
+  audioUrl: string;
+  totalSegments: number;
+  message: string;
+}

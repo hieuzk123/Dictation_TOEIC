@@ -1,5 +1,5 @@
 import React from 'react';
-import { Headphones, LogOut, History, LogIn, HelpCircle } from 'lucide-react';
+import { Headphones, LogOut, History, LogIn, HelpCircle, Shield } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -7,9 +7,10 @@ interface NavbarProps {
   onOpenHistory?: () => void;
   onHomeClick?: () => void;
   onOpenShortcuts?: () => void;
+  onOpenAdmin?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenHistory, onHomeClick, onOpenShortcuts }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenHistory, onHomeClick, onOpenShortcuts, onOpenAdmin }) => {
   const { user, logout, openAuthModal } = useAuth();
 
   return (
@@ -56,11 +57,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenHistory, onHomeClick, onOp
           {user && (
             <button
               onClick={onOpenHistory}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl glass-card text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl glass-card text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition-all active:scale-95 cursor-pointer"
               title="Xem lịch sử học tập"
             >
               <History className="w-4 h-4 text-brand-400" />
               <span className="hidden sm:inline">Lịch sử làm bài</span>
+            </button>
+          )}
+
+          {/* Admin CMS Button */}
+          {user && user.role === 'ROLE_ADMIN' && onOpenAdmin && (
+            <button
+              onClick={onOpenAdmin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all active:scale-95 shadow-sm cursor-pointer"
+              title="Quản trị Đề thi & CMS"
+            >
+              <Shield className="w-4 h-4 text-emerald-400" />
+              <span className="hidden sm:inline">Admin CMS</span>
             </button>
           )}
 

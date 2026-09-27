@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, User, Mail, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Lock, User, Mail, Sparkles, AlertCircle, Loader2, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const AuthModal: React.FC = () => {
@@ -57,13 +57,20 @@ export const AuthModal: React.FC = () => {
     setError(null);
   };
 
+  const handleQuickAdminFill = () => {
+    setIsRegister(false);
+    setUsernameOrEmail('admin');
+    setPassword('ToeicDictation@2026!');
+    setError(null);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-md rounded-2xl glass-panel p-6 shadow-2xl border border-slate-700/50">
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+          className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -72,7 +79,7 @@ export const AuthModal: React.FC = () => {
         <div className="flex items-center gap-4 mb-6 border-b border-slate-800 pb-3">
           <button
             onClick={() => { setIsRegister(false); setError(null); }}
-            className={`text-lg font-bold transition-colors ${
+            className={`text-lg font-bold transition-colors cursor-pointer ${
               !isRegister ? 'text-indigo-400 border-b-2 border-indigo-500 pb-1 -mb-3.5' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -80,7 +87,7 @@ export const AuthModal: React.FC = () => {
           </button>
           <button
             onClick={() => { setIsRegister(true); setError(null); }}
-            className={`text-lg font-bold transition-colors ${
+            className={`text-lg font-bold transition-colors cursor-pointer ${
               isRegister ? 'text-indigo-400 border-b-2 border-indigo-500 pb-1 -mb-3.5' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -88,16 +95,24 @@ export const AuthModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Demo Button */}
+        {/* Quick Demo Buttons */}
         {!isRegister && (
-          <div className="mb-5">
+          <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
               onClick={handleQuickDemoFill}
-              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-950/80 to-purple-950/80 border border-indigo-500/40 text-indigo-300 text-xs font-semibold flex items-center justify-center gap-2 hover:border-indigo-400 hover:text-indigo-200 transition-all shadow-glow-indigo"
+              className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-indigo-950/80 to-purple-950/80 border border-indigo-500/40 text-indigo-300 text-xs font-semibold flex items-center justify-center gap-1.5 hover:border-indigo-400 hover:text-indigo-200 transition-all shadow-glow-indigo cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-indigo-400 animate-spin" style={{ animationDuration: '6s' }} />
-              Dùng tài khoản mẫu (demo_user / ToeicDictation@2026!)
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span>Học viên Demo</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleQuickAdminFill}
+              className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-emerald-950/80 to-teal-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5 hover:border-emerald-400 hover:text-emerald-200 transition-all shadow-sm cursor-pointer"
+            >
+              <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Giáo viên (Admin)</span>
             </button>
           </div>
         )}

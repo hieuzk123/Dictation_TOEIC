@@ -24,3 +24,18 @@ jwt:
 
 app:
   audio-dir: ${APP_AUDIO_DIR:../data_pipeline/sample_data/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true

@@ -50,7 +50,7 @@ public class SecurityConfig {
                                 response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
                 ))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/audio/**", "/api/tests/**", "/api/items/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/audio/**", "/api/tests/**", "/api/items/**", "/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

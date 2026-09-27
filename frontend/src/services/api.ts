@@ -8,7 +8,9 @@ import type {
   AudioItemDetail,
   SubmitStudyRequest,
   SubmitStudyResponse,
-  StudyHistory
+  StudyHistory,
+  AdminStats,
+  AdminUploadResponse,
 } from '../types';
 
 const TOKEN_KEY = 'toeic_dictation_token';
@@ -66,7 +68,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   let token = tokenStorage.get();
   
   const headers = new Headers(options.headers || {});
-  headers.set('Content-Type', 'application/json');
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
   
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -97,7 +101,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       const newToken = await refreshPromise;
       if (newToken) {
         const retryHeaders = new Headers(options.headers || {});
-        retryHeaders.set('Content-Type', 'application/json');
+        if (!(options.body instanceof FormData)) {
+          retryHeaders.set('Content-Type', 'application/json');
+        }
         retryHeaders.set('Authorization', `Bearer ${newToken}`);
         response = await fetch(endpoint, {
           ...options,
@@ -194,6 +200,25 @@ export const api = {
 
     getHistoryDetail: (id: number): Promise<StudyHistory> => {
       return request<StudyHistory>(`/api/study/history/${id}`);
+    },
+  },
+
+  admin: {
+    getStats: (): Promise<AdminStats> => {
+      return request<AdminStats>('/api/admin/stats');
+    },
+
+    deleteItem: (id: number): Promise<{ message: string; id: string }> => {
+      return request<{ message: string; id: string }>(`/api/admin/items/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    uploadItem: (formData: FormData): Promise<AdminUploadResponse> => {
+      return request<AdminUploadResponse>('/api/admin/items/upload', {
+        method: 'POST',
+        body: formData,
+      });
     },
   },
 };

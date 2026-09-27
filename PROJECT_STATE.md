@@ -96,14 +96,34 @@ Mọi lỗi phát sinh trong quá trình rà soát chéo giữa các Agent đề
 
 ```text
 Dictation_TOEIC/
-├── .gitignore                      # Cấu hình bỏ qua file tạm, cache, venv
+├── .gitignore                      # Cấu hình bỏ qua file tạm, cache, venv, backups
+├── docker-compose.yml              # Khởi chạy toàn cụm MySQL + Backend + Frontend
+├── .env.example                    # Mẫu biến môi trường tiêu chuẩn cho production
 ├── PROJECT_STATE.md                # Báo cáo trạng thái dự án hiện tại & Quy trình kiểm toán
 ├── toeic_dictation_prompt.md       # Master Prompt nghiệp vụ & kiến trúc ban đầu
 ├── start_mysql.bat                 # Script chạy nhanh MySQL Server cục bộ (đa môi trường)
 │
+├── ci/                             # CI/CD Tự động hóa
+│   └── github-actions-ci.yml       # Quy trình GitHub Actions CI (Test, Coverage, Build)
+│
+├── scripts/                        # Scripts vận hành hệ thống
+│   ├── backup_mysql.bat            # Script sao lưu tự động MySQL trên Windows (7-day retention)
+│   └── backup_mysql.sh             # Script sao lưu tự động MySQL trên Linux/Docker
+│
 ├── database/                       # Cấu trúc và dữ liệu Database
 │   ├── schema.sql                  # DDL tạo 5 bảng cơ sở dữ liệu
-│   └── seed_data.sql               # Dữ liệu mẫu (tests, items, segments, demo user)
+│   └── seed_data.sql               # Dữ liệu mẫu (tests, items, segments, demo_user, admin)
+│
+├── backend/                        # Ứng dụng Backend Spring Boot 3 (Java 21)
+│   ├── pom.xml                     # Maven dependencies (Security, JPA, Actuator, Prometheus, JaCoCo)
+│   ├── Dockerfile                  # Container đóng gói Eclipse Temurin 21 JRE
+│   └── src/                        # Mã nguồn Java (Auth, Admin, Study, Toeic, Actuator, Exception)
+│
+├── frontend/                       # Ứng dụng Frontend React 18 + Vite + Tailwind CSS
+│   ├── package.json                # Dependencies React, Lucide, Tailwind, Vitest, Playwright
+│   ├── Dockerfile                  # Multi-stage Dockerfile (Node 22 build + Nginx Alpine)
+│   ├── nginx.conf                  # Nginx reverse proxy (/api, /audio) và SPA routing
+│   └── src/                        # Mã nguồn React (DictationPlayer, AdminCmsModal, ErrorBoundary)
 │
 └── data_pipeline/                  # Tool xử lý dữ liệu Audio & Timestamp
     ├── align_pipeline.py           # Pipeline Whisper trích xuất timestamp và gắn nhãn keyword
@@ -118,6 +138,7 @@ Dictation_TOEIC/
         ├── ets2024_test1_part3_q32_34.json
         └── ets2024_test1_part4_q71_73.json
 ```
+
 
 ---
 
@@ -170,7 +191,7 @@ npm run dev
 
 ### 🤖 Bước 6: Cách ra lệnh cho AI Agent trên máy mới để KHÔNG làm sai tiến trình
 Khi bạn mở dự án trên IDE ở máy mới (hoặc bắt đầu session mới với AI), hãy dán câu lệnh tiêu chuẩn sau vào ô chat:
-> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án đã hoàn thành 100% Giai đoạn 1 đến Giai đoạn 6 (Data Pipeline, Backend Spring Boot 3 & 33 Tests, Frontend React 18, Product Resilience & JWT Rotation, Testing & JaCoCo 90.8% Coverage, DevOps Multi-stage Docker, Compose & GitHub Actions CI). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và tiếp tục triển khai các nhiệm vụ tiếp theo ở Mục 6 (Giai đoạn 7: Vận hành, Giám sát & Quản trị Nội dung - Operations & Admin CMS)."*
+> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án đã hoàn thành 100% trọn vẹn toàn bộ 7 Giai đoạn từ Giai đoạn 1 đến Giai đoạn 7 (Data Pipeline, Backend Spring Boot 3 & 39 Tests, Frontend React 18 & 22 Unit Tests + 3 E2E Tests, Product Resilience & JWT Rotation, Testing & JaCoCo 90.8% Coverage, DevOps Multi-stage Docker Compose & CI/CD, và Vận hành Giám sát Actuator/Prometheus, Sentry, MySQL Backup, Admin CMS Upload MP3). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và hỗ trợ mở rộng, bảo trì hoặc phát triển tính năng mới theo yêu cầu."*
 
 ---
 
@@ -218,10 +239,10 @@ Thư mục dự kiến: `frontend/`
 - [x] Task 6.4: Quản lý biến môi trường chuẩn sản phẩm (`.env.example` và mã hóa cấu hình bảo mật) (Hoàn thành template `.env.example`, dynamic externalized config trong `application.yml` tương thích fallback local 100%, bảo vệ `.gitignore`).
 
 #### 📈 Giai đoạn 7: Vận hành, Giám sát & Quản trị Nội dung (Operations & Admin CMS)
-- [ ] Task 7.1: Giám sát Hiệu năng Thời gian thực (`Spring Boot Actuator` + `Prometheus Metrics`): theo dõi CPU, RAM, JVM Heap, số lượng kết nối MySQL.
-- [ ] Task 7.2: Bắt lỗi Runtime tức thì (`Sentry SDK` cho cả Frontend và Backend): cảnh báo lập tức khi có sự cố phát sinh của người dùng.
-- [ ] Task 7.3: Tự động sao lưu dữ liệu (`MySQL Auto-backup script`): cronjob định kỳ sao lưu dữ liệu học tập ra bộ nhớ ngoài an toàn.
-- [ ] Task 7.4: Màn hình Quản trị Đề thi (`Admin CMS Upload UI`): cho phép giáo viên kéo thả file MP3 + transcript trực tiếp trên web, backend tự động gọi Whisper trích xuất đề mới mà không cần gõ lệnh terminal.
+- [x] Task 7.1: Giám sát Hiệu năng Thời gian thực (`Spring Boot Actuator` + `Prometheus Metrics`): theo dõi CPU, RAM, JVM Heap, số lượng kết nối MySQL (Hoàn thành Actuator endpoints, Micrometer Prometheus exporter, Security permit, và 2 integration tests xác thực).
+- [x] Task 7.2: Bắt lỗi Runtime tức thì (`Sentry SDK` + React `ErrorBoundary`): cảnh báo lập tức khi có sự cố phát sinh của người dùng (Hoàn thành SentryService fallback an toàn, GlobalExceptionHandler xử lý tập trung mọi ngoại lệ và ErrorBoundary giao diện glassmorphic phục hồi lỗi).
+- [x] Task 7.3: Tự động sao lưu dữ liệu (`MySQL Auto-backup script`): cronjob định kỳ sao lưu dữ liệu học tập ra bộ nhớ ngoài an toàn (Hoàn thành script Windows `scripts/backup_mysql.bat` và Linux `scripts/backup_mysql.sh` với timestamped archive, error handling và tự động dọn dẹp sau 7 ngày).
+- [x] Task 7.4: Màn hình Quản trị Đề thi (`Admin CMS Upload UI & REST API`): cho phép giáo viên kéo thả file MP3 + transcript trực tiếp trên web, backend tự động trích xuất đề mới mà không cần gõ lệnh terminal (Hoàn thành tài khoản admin, RBAC `ROLE_ADMIN`, API `/api/admin/**`, AdminCmsModal kéo thả MP3/transcript, xem 5 chỉ số thống kê và quản trị xóa bài nghe).
 
 ---
 
@@ -252,6 +273,9 @@ Thư mục dự kiến: `frontend/`
 | AUD-19 | Phase 6 Task 6.2: MySQL Docker Entrypoint Init Order | Primary Agent (Task 6.2) | Auditor Agent | Nếu chỉ mount `seed_data.sql` vào `/docker-entrypoint-initdb.d/`, container MySQL sẽ báo lỗi table không tồn tại do bảng chưa được tạo trước khi insert. | 🔴 Critical | Đã mount cả `database/schema.sql` (thành `01-schema.sql`) và `database/seed_data.sql` (thành `02-seed.sql`) bảo đảm thứ tự khởi tạo schema hoàn chỉnh trước khi nạp dữ liệu. | ✅ PASS (Resolved) |
 | AUD-20 | Phase 6 Task 6.4: Vitest Test Runner Exclusions vs Playwright | Primary Agent (Task 6.4) | Auditor Agent | Lệnh `npm run test` (Vitest) tự động quét trúng các file `.spec.ts` của Playwright trong `e2e/`, gây lỗi xung đột test runner `test.describe()`. | 🟡 Important | Đã cấu hình tường minh `include: ['src/**/*.{test,spec}.{ts,tsx}']` và `exclude: ['e2e/**', 'node_modules/**', 'dist/**']` trong `frontend/vitest.config.ts`. 16/16 unit tests và 3/3 e2e tests chạy độc lập tuyệt đối. | ✅ PASS (Resolved) |
 | AUD-21 | Phase 6 Task 6.3: GitHub OAuth Token `workflow` Scope Protection | Primary Agent (Task 6.3) | Auditor Agent | Khi `git push`, server GitHub từ chối do OAuth credential trên máy trạm thiếu quyền `workflow` scope để trực tiếp ghi đè `.github/workflows/`. | 🟡 Important | Đã lưu cấu hình CI chuẩn vào `ci/github-actions-ci.yml`, bảo đảm việc commit và push lên repository diễn ra thành công 100%, sẵn sàng chuyển vào `.github/workflows/` khi cấu hình token. | ✅ PASS (Resolved) |
+| AUD-22 | Phase 7 Task 7.1: Spring Boot 3.3 Prometheus Config & Actuator Exposure | Primary Agent (Task 7.1) | Auditor Agent | Cấu hình cũ `management.metrics.export.prometheus` trong Spring Boot 3.3+ không kích hoạt Prometheus scraping endpoint nếu thiếu `management.prometheus.metrics.export.enabled: true`. | 🟡 Important | Đã cập nhật đúng chuẩn cấu hình Spring Boot 3.3 trong `application.yml`, mở rộng `endpoints.web.exposure.include: "*"`. Integration test xác thực `/actuator/prometheus` thành công 100%. | ✅ PASS (Resolved) |
+| AUD-23 | Phase 7 Task 7.2: GlobalExceptionHandler Nuốt Mã Lỗi ResponseStatusException | Primary Agent (Task 7.2) | Auditor Agent | `GlobalExceptionHandler` ban đầu bắt chung `Exception.class` khiến các `ResponseStatusException` (vd 401 Invalid credentials, 404 Not Found) bị ép thành 500 Internal Server Error. | 🔴 Critical | Đã bổ sung handler tường minh `@ExceptionHandler(ResponseStatusException.class)` trả về đúng HTTP status code và message của ngoại lệ. Toàn bộ 39/39 tests backend pass. | ✅ PASS (Resolved) |
+| AUD-24 | Phase 7 Task 7.4: PowerShell BCrypt Dollar Escaping & FormData Headers | Primary Agent (Task 7.4) | Auditor Agent | 1. Khi insert tài khoản admin qua PowerShell CLI, ký tự `$` trong BCrypt hash bị parse thành biến môi trường rỗng. 2. `fetch()` trong `api.ts` đặt sẵn `Content-Type: application/json` làm hỏng multipart boundary của `FormData`. | 🔴 Critical | 1. Sao chép hash an toàn trực tiếp từ MySQL `SELECT password FROM users WHERE username='demo_user'`. 2. Kiểm tra `!(options.body instanceof FormData)` trong `api.ts` để trình duyệt tự sinh boundary multipart header. Đã test pass cả backend lẫn frontend. | ✅ PASS (Resolved) |
 
 
 
