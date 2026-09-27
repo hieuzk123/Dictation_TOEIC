@@ -14,6 +14,8 @@ import {
   Users,
   BookOpen,
   Headphones,
+  Plus,
+  FolderPlus,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { ToeicTest, AudioItemSummary, AdminStats } from '../types';
@@ -38,6 +40,13 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [transcriptText, setTranscriptText] = useState<string>('');
 
+  // New test creation state
+  const [isCreatingNewTest, setIsCreatingNewTest] = useState<boolean>(false);
+  const [newTestYear, setNewTestYear] = useState<string>('2023');
+  const [newTestNumber, setNewTestNumber] = useState<number>(1);
+  const [newTestTitle, setNewTestTitle] = useState<string>('');
+  const [isSavingTest, setIsSavingTest] = useState<boolean>(false);
+
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -47,6 +56,7 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
   const [items, setItems] = useState<AudioItemSummary[]>([]);
   const [loadingItems, setLoadingItems] = useState<boolean>(false);
   const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
+
 
   const loadStats = React.useCallback(() => {
     api.admin.getStats()
@@ -91,11 +101,53 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleSaveNewTest = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newTestYear.trim()) {
+      setUploadError('Vui lòng nhập Năm phát hành hoặc Bộ đề (vd: 2023 hoặc ETS 2023).');
+      return;
+    }
+    if (!newTestNumber || newTestNumber < 1) {
+      setUploadError('Vui lòng nhập Số thứ tự đề hợp lệ (lớn hơn 0).');
+      return;
+    }
+
+    try {
+      setIsSavingTest(true);
+      setUploadError(null);
+      const computedTitle =
+        newTestTitle.trim() ||
+        `${newTestYear.trim().toUpperCase().startsWith('ETS') ? newTestYear.trim() : 'ETS ' + newTestYear.trim()} - Test ${newTestNumber}`;
+      const created = await api.admin.createTest({
+        year: newTestYear.trim(),
+        testNumber: Number(newTestNumber),
+        title: computedTitle,
+      });
+
+      const updatedTests = await api.toeic.getTests();
+      setTests(updatedTests);
+      setSelectedTestId(created.id);
+      setIsCreatingNewTest(false);
+      setUploadSuccess(`Đã tạo thành công đề thi "${created.title}"!`);
+      onDataChanged?.();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Tạo đề thi mới thất bại';
+      setUploadError(msg);
+    } finally {
+      setIsSavingTest(false);
+    }
+  };
+
   const handleAudioDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type.includes('audio') || file.name.endsWith('.mp3')) {
+        if (file.size > 50 * 1024 * 1024) {
+          setUploadError(`Tập tin âm thanh quá lớn (${(file.size / (1024 * 1024)).toFixed(1)}MB). Giới hạn tối đa là 50MB.`);
+          return;
+        }
+        setUploadError(null);
         setAudioFile(file);
       } else {
         setUploadError('Chỉ hỗ trợ file định dạng âm thanh (.mp3)');
@@ -105,7 +157,13 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setAudioFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > 50 * 1024 * 1024) {
+        setUploadError(`Tập tin âm thanh quá lớn (${(file.size / (1024 * 1024)).toFixed(1)}MB). Giới hạn tối đa là 50MB.`);
+        return;
+      }
+      setUploadError(null);
+      setAudioFile(file);
     }
   };
 
@@ -114,8 +172,12 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
     setUploadError(null);
     setUploadSuccess(null);
 
-    if (!selectedTestId) {
-      setUploadError('Vui lòng chọn Đề thi áp dụng.');
+    if (!isCreatingNewTest && !selectedTestId) {
+      setUploadError('Vui lòng chọn hoặc tạo Đề thi áp dụng.');
+      return;
+    }
+    if (isCreatingNewTest && (!newTestYear.trim() || !newTestNumber)) {
+      setUploadError('Vui lòng nhập đầy đủ Năm và Số thứ tự đề thi mới.');
       return;
     }
     if (!itemNumber.trim()) {
@@ -134,7 +196,16 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
     try {
       setIsUploading(true);
       const formData = new FormData();
-      formData.append('testId', selectedTestId.toString());
+      if (isCreatingNewTest) {
+        formData.append('newTestYear', newTestYear.trim());
+        formData.append('newTestNumber', newTestNumber.toString());
+        const computedTitle =
+          newTestTitle.trim() ||
+          `${newTestYear.trim().toUpperCase().startsWith('ETS') ? newTestYear.trim() : 'ETS ' + newTestYear.trim()} - Test ${newTestNumber}`;
+        formData.append('newTestTitle', computedTitle);
+      } else {
+        formData.append('testId', selectedTestId.toString());
+      }
       formData.append('part', part.toString());
       formData.append('itemNumber', itemNumber.trim());
       formData.append('title', title.trim());
@@ -142,26 +213,41 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
       formData.append('transcriptText', transcriptText.trim());
 
       const res = await api.admin.uploadItem(formData);
-      setUploadSuccess(`Đã tạo thành công "${res.title}" với ${res.totalSegments} câu phân đoạn tự động!`);
+      setUploadSuccess(`Đã tạo thành công bài nghe "${res.title}" với ${res.totalSegments} câu phân đoạn tự động!`);
       
       // Reset form
       setItemNumber('');
       setTitle('');
       setAudioFile(null);
       setTranscriptText('');
+      setIsCreatingNewTest(false);
 
       loadStats();
-      if (selectedTestId) {
-        api.toeic.getTestItems(Number(selectedTestId)).then(setItems);
+      const updatedTests = await api.toeic.getTests();
+      setTests(updatedTests);
+      if (res.itemId) {
+        const testToLoad = isCreatingNewTest
+          ? updatedTests.find((t) => String(t.year).includes(newTestYear))?.id || selectedTestId
+          : selectedTestId;
+        if (testToLoad) {
+          api.toeic.getTestItems(Number(testToLoad)).then(setItems);
+        }
       }
       onDataChanged?.();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Upload thất bại';
+      let msg = 'Upload thất bại';
+      if (err instanceof Error) {
+        msg = err.message;
+        if (msg.includes('Failed to fetch')) {
+          msg = 'Không thể kết nối đến máy chủ Backend hoặc kích thước tập tin vượt quá 50MB. Vui lòng kiểm tra lại dịch vụ Backend.';
+        }
+      }
       setUploadError(msg);
     } finally {
       setIsUploading(false);
     }
   };
+
 
   const handleDeleteItem = async (itemId: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa bài nghe này và toàn bộ phân đoạn liên quan?')) {
@@ -259,20 +345,129 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
               {/* Grid 1: Test Selection & Part */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                    Đề thi ETS áp dụng <span className="text-rose-400">*</span>
-                  </label>
-                  <select
-                    value={selectedTestId}
-                    onChange={(e) => setSelectedTestId(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-                  >
-                    {tests.map((t) => (
-                      <option key={t.id} value={t.id} className="bg-slate-900 text-slate-200">
-                        {t.title} ({t.year})
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-slate-300">
+                      Đề thi ETS áp dụng <span className="text-rose-400">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCreatingNewTest(!isCreatingNewTest);
+                        setUploadError(null);
+                      }}
+                      className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{isCreatingNewTest ? 'Chọn đề có sẵn' : 'Tạo đề thi mới'}</span>
+                    </button>
+                  </div>
+
+                  {!isCreatingNewTest ? (
+                    <select
+                      value={selectedTestId}
+                      onChange={(e) => {
+                        if (e.target.value === 'NEW') {
+                          setIsCreatingNewTest(true);
+                        } else {
+                          setSelectedTestId(Number(e.target.value));
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    >
+                      {tests.map((t) => (
+                        <option key={t.id} value={t.id} className="bg-slate-900 text-slate-200">
+                          {t.title} ({t.year})
+                        </option>
+                      ))}
+                      <option value="NEW" className="bg-slate-900 text-emerald-400 font-semibold">
+                        + Tạo đề thi mới (Tùy chỉnh năm & số đề)...
                       </option>
-                    ))}
-                  </select>
+                    </select>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                          <FolderPlus className="w-4 h-4" />
+                          Khởi tạo Đề thi ETS mới
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsCreatingNewTest(false)}
+                          className="text-[11px] text-slate-400 hover:text-slate-200"
+                        >
+                          Hủy
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] text-slate-300 mb-1">
+                            Năm / Bộ đề <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newTestYear}
+                            onChange={(e) => {
+                              setNewTestYear(e.target.value);
+                              if (!newTestTitle || newTestTitle.startsWith('ETS ')) {
+                                setNewTestTitle(`ETS ${e.target.value} - Test ${newTestNumber}`);
+                              }
+                            }}
+                            placeholder="2023 hoặc ETS 2023"
+                            className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] text-slate-300 mb-1">
+                            Số thứ tự đề <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={newTestNumber}
+                            onChange={(e) => {
+                              const num = Math.max(1, parseInt(e.target.value) || 1);
+                              setNewTestNumber(num);
+                              if (!newTestTitle || newTestTitle.startsWith('ETS ')) {
+                                setNewTestTitle(`ETS ${newTestYear} - Test ${num}`);
+                              }
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-slate-300 mb-1">
+                          Tiêu đề hiển thị của Đề thi
+                        </label>
+                        <input
+                          type="text"
+                          value={newTestTitle}
+                          onChange={(e) => setNewTestTitle(e.target.value)}
+                          placeholder={`ETS ${newTestYear} - Test ${newTestNumber}`}
+                          className="w-full px-2.5 py-1.5 rounded-lg glass-input text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleSaveNewTest}
+                          disabled={isSavingTest}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingTest ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>Lưu & Chọn đề này</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

@@ -129,4 +129,57 @@ class AdminControllerTests {
                 .andExpect(jsonPath("$.message").value("AudioItem deleted successfully"))
                 .andExpect(jsonPath("$.id").value(String.valueOf(createdItemId)));
     }
+
+    @Test
+    @DisplayName("POST /api/admin/tests should create a new test and return 201 Created")
+    void testAdminCreateTestSuccess() throws Exception {
+        com.toeic.dictation.dto.CreateTestRequest request = com.toeic.dictation.dto.CreateTestRequest.builder()
+                .year("ETS 2023")
+                .testNumber(2)
+                .title("ETS 2023 - Test 2")
+                .description("ETS Official Practice Test 2 (2023)")
+                .build();
+
+        mockMvc.perform(post("/api/admin/tests")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.year").value("ETS 2023"))
+                .andExpect(jsonPath("$.testNumber").value(2))
+                .andExpect(jsonPath("$.title").value("ETS 2023 - Test 2"));
+    }
+
+    @Test
+    @DisplayName("POST /api/admin/items/upload with newTestYear & newTestNumber should auto-create test")
+    void testAdminUploadWithDynamicNewTest() throws Exception {
+        MockMultipartFile audioFile = new MockMultipartFile(
+                "audioFile",
+                "test_dynamic.mp3",
+                "audio/mpeg",
+                "FAKE_AUDIO_BYTES_DYNAMIC".getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/admin/items/upload")
+                        .file(audioFile)
+                        .param("newTestYear", "2022")
+                        .param("newTestNumber", "5")
+                        .param("newTestTitle", "ETS 2022 - Test 5")
+                        .param("part", "4")
+                        .param("itemNumber", "71-73")
+                        .param("title", "Flight Delay Announcement 2022")
+                        .param("transcriptText", "Attention all passengers. Flight 202 is delayed.")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemId").isNumber())
+                .andExpect(jsonPath("$.title").value("Flight Delay Announcement 2022"))
+                .andReturn();
+
+        long createdItemId = objectMapper.readTree(result.getResponse().getContentAsString()).get("itemId").asLong();
+        mockMvc.perform(delete("/api/admin/items/" + createdItemId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
 }
+

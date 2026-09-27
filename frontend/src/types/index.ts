@@ -155,3 +155,11 @@ export interface AdminUploadResponse {
   totalSegments: number;
   message: string;
 }
+
+export interface CreateTestRequest {
+  year: string;
+  testNumber: number;
+  title?: string;
+  description?: string;
+}
+

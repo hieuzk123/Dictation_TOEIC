@@ -11,6 +11,7 @@ vi.mock('../../services/api', () => ({
     },
     admin: {
       getStats: vi.fn(),
+      createTest: vi.fn(),
       uploadItem: vi.fn(),
       deleteItem: vi.fn(),
     },
@@ -48,6 +49,12 @@ describe('AdminCmsModal Component', () => {
     vi.mocked(api.toeic.getTests).mockResolvedValue(mockTests);
     vi.mocked(api.admin.getStats).mockResolvedValue(mockStats);
     vi.mocked(api.toeic.getTestItems).mockResolvedValue(mockItems);
+    vi.mocked(api.admin.createTest).mockResolvedValue({
+      id: 2,
+      title: 'ETS 2023 - Test 2',
+      year: 2023,
+      testNumber: 2,
+    });
   });
 
   it('renders nothing when isOpen is false', () => {
@@ -70,6 +77,27 @@ describe('AdminCmsModal Component', () => {
     });
   });
 
+  it('toggles new test creation form and calls api.admin.createTest', async () => {
+    render(<AdminCmsModal isOpen={true} onClose={vi.fn()} />);
+
+    const createTestToggleBtn = screen.getByRole('button', { name: /Tạo đề thi mới/i });
+    fireEvent.click(createTestToggleBtn);
+
+    expect(screen.getByText(/Khởi tạo Đề thi ETS mới/)).toBeInTheDocument();
+
+    const saveTestBtn = screen.getByText(/Lưu & Chọn đề này/);
+    fireEvent.click(saveTestBtn);
+
+    await waitFor(() => {
+      expect(api.admin.createTest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: '2023',
+          testNumber: 1,
+        })
+      );
+    });
+  });
+
   it('switches to stats & manage tab and renders metrics', async () => {
     render(<AdminCmsModal isOpen={true} onClose={vi.fn()} />);
 
@@ -85,3 +113,4 @@ describe('AdminCmsModal Component', () => {
     });
   });
 });
+

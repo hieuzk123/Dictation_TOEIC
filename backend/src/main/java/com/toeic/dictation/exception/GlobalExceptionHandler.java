@@ -67,10 +67,23 @@ public class GlobalExceptionHandler {
         return buildResponse(status, ex.getReason() != null ? ex.getReason() : ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        log.warn("Max upload size exceeded on {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Kích thước tập tin âm thanh vượt quá giới hạn tối đa cho phép (50MB).", request.getRequestURI());
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Malformed request body on {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Dữ liệu yêu cầu không hợp lệ hoặc sai định dạng JSON.", request.getRequestURI());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUncaughtException(Exception ex, HttpServletRequest request) {
+        log.error("Uncaught exception on {}: ", request.getRequestURI(), ex);
         sentryService.captureException(ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An internal server error occurred.", request.getRequestURI());
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An internal server error occurred: " + ex.getMessage(), request.getRequestURI());
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, String path) {

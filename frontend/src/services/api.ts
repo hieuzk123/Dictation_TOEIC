@@ -11,7 +11,9 @@ import type {
   StudyHistory,
   AdminStats,
   AdminUploadResponse,
+  CreateTestRequest,
 } from '../types';
+
 
 const TOKEN_KEY = 'toeic_dictation_token';
 const REFRESH_TOKEN_KEY = 'toeic_dictation_refresh_token';
@@ -206,6 +208,13 @@ export const api = {
   admin: {
     getStats: (): Promise<AdminStats> => {
       return request<AdminStats>('/api/admin/stats');
+    },
+
+    createTest: (data: CreateTestRequest): Promise<ToeicTest> => {
+      return request<ToeicTest>('/api/admin/tests', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
     },
 
     deleteItem: (id: number): Promise<{ message: string; id: string }> => {

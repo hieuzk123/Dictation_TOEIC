@@ -3,6 +3,8 @@ package com.toeic.dictation.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.toeic.dictation.dto.AdminStatsResponse;
 import com.toeic.dictation.dto.AdminUploadResponse;
+import com.toeic.dictation.dto.CreateTestRequest;
+import com.toeic.dictation.dto.toeic.ToeicTestDto;
 import com.toeic.dictation.model.AudioItem;
 import com.toeic.dictation.model.AudioSegment;
 import com.toeic.dictation.model.ToeicTest;
@@ -64,6 +66,55 @@ public class AdminContentService {
     }
 
     @Transactional
+    public ToeicTestDto createTest(CreateTestRequest request) {
+        if (request.getYear() == null || request.getYear().trim().isEmpty()) {
+            throw new IllegalArgumentException("Năm phát hành / Bộ đề không được để trống (vd: 2023 hoặc ETS 2023)");
+        }
+        if (request.getTestNumber() == null || request.getTestNumber() < 1) {
+            throw new IllegalArgumentException("Số thứ tự đề thi phải lớn hơn 0");
+        }
+
+        String year = request.getYear().trim();
+        Integer testNum = request.getTestNumber();
+
+        Optional<ToeicTest> existing = testRepository.findByYearAndTestNumber(year, testNum);
+        if (existing.isPresent()) {
+            ToeicTest t = existing.get();
+            return ToeicTestDto.builder()
+                    .id(t.getId())
+                    .year(t.getYear())
+                    .testNumber(t.getTestNumber())
+                    .title(t.getTitle())
+                    .description(t.getDescription())
+                    .itemCount(t.getItems() != null ? t.getItems().size() : 0)
+                    .build();
+        }
+
+        String title = (request.getTitle() != null && !request.getTitle().trim().isEmpty())
+                ? request.getTitle().trim()
+                : (year.toUpperCase().startsWith("ETS") ? year : "ETS " + year) + " - Test " + testNum;
+
+        ToeicTest newTest = ToeicTest.builder()
+                .year(year)
+                .testNumber(testNum)
+                .title(title)
+                .description(request.getDescription())
+                .build();
+
+        ToeicTest saved = testRepository.save(newTest);
+        log.info("Created new ToeicTest: id={}, title={}", saved.getId(), saved.getTitle());
+
+        return ToeicTestDto.builder()
+                .id(saved.getId())
+                .year(saved.getYear())
+                .testNumber(saved.getTestNumber())
+                .title(saved.getTitle())
+                .description(saved.getDescription())
+                .itemCount(0)
+                .build();
+    }
+
+    @Transactional
     public AdminUploadResponse uploadAndCreateItem(
             Long testId,
             Integer part,
@@ -72,14 +123,43 @@ public class AdminContentService {
             MultipartFile audioFile,
             String transcriptText
     ) throws IOException {
-        if (testId == null) throw new IllegalArgumentException("testId is required");
+        return uploadAndCreateItem(testId, part, itemNumber, title, audioFile, transcriptText, null, null, null);
+    }
+
+    @Transactional
+    public AdminUploadResponse uploadAndCreateItem(
+            Long testId,
+            Integer part,
+            String itemNumber,
+            String title,
+            MultipartFile audioFile,
+            String transcriptText,
+            String newTestYear,
+            Integer newTestNumber,
+            String newTestTitle
+    ) throws IOException {
         if (part == null || (part != 3 && part != 4)) throw new IllegalArgumentException("part must be 3 or 4");
         if (itemNumber == null || itemNumber.trim().isEmpty()) throw new IllegalArgumentException("itemNumber is required");
         if (title == null || title.trim().isEmpty()) throw new IllegalArgumentException("title is required");
         if (audioFile == null || audioFile.isEmpty()) throw new IllegalArgumentException("audioFile is required");
 
-        ToeicTest test = testRepository.findById(testId)
-                .orElseThrow(() -> new IllegalArgumentException("ToeicTest not found with id: " + testId));
+        ToeicTest test;
+        if (testId != null) {
+            test = testRepository.findById(testId)
+                    .orElseThrow(() -> new IllegalArgumentException("ToeicTest not found with id: " + testId));
+        } else if (newTestYear != null && !newTestYear.trim().isEmpty() && newTestNumber != null) {
+            CreateTestRequest req = CreateTestRequest.builder()
+                    .year(newTestYear.trim())
+                    .testNumber(newTestNumber)
+                    .title(newTestTitle)
+                    .build();
+            ToeicTestDto createdDto = createTest(req);
+            test = testRepository.findById(createdDto.getId())
+                    .orElseThrow(() -> new IllegalStateException("Failed to retrieve created test"));
+        } else {
+            throw new IllegalArgumentException("Vui lòng chọn hoặc tạo đề thi áp dụng.");
+        }
+
 
         // 1. Save Audio File to audioDir
         Path audioPath = Paths.get(audioDir).toAbsolutePath().normalize();
