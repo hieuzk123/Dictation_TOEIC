@@ -32,14 +32,8 @@ function DictationApp() {
   const [studyResult, setStudyResult] = useState<SubmitStudyResponse | null>(null);
   const [isSubmittingStudy, setIsSubmittingStudy] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
-  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
-
-  // Check first-time onboarding prompt
-  useEffect(() => {
-    if (!storage.isOnboardingSeen()) {
-      setIsShortcutsOpen(true);
-    }
-  }, []);
+  // Check first-time onboarding prompt lazily on initial render
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(() => !storage.isOnboardingSeen());
 
   // Load tests on mount
   useEffect(() => {

@@ -1,7 +1,7 @@
 # TRẠNG THÁI DỰ ÁN: TOEIC DICTATION (PART 3 & 4)
 > **Tài liệu bàn giao & Hướng dẫn phát triển đa môi trường**  
 > *Repository*: [hieuzk123/Dictation_TOEIC](https://github.com/hieuzk123/Dictation_TOEIC)  
-> *Cập nhật lần cuối*: 2026-09-26  
+> *Cập nhật lần cuối*: 2026-09-28  
 
 ---
 
@@ -206,10 +206,10 @@ Thư mục dự kiến: `frontend/`
 - [x] Task 4.4: Phân trang & Tìm kiếm bài nghe (`Pagination & Search/Filter`): hỗ trợ mở rộng kho đề thi từ hàng chục lên hàng trăm đề (Hoàn thành thanh tìm kiếm tiêu đề/mã câu, tabs lọc Part 3/4, pagination responsive trên giao diện và backend JPQL query filter).
 
 #### 🧪 Giai đoạn 5: Kiểm thử Tự động & Đo lường Chất lượng (Testing & Engineering Quality)
-- [ ] Task 5.1: Bộ kiểm thử tự động Frontend (`Vitest` + `React Testing Library`): viết unit test cho các component cốt lõi `DictationPlayer`, `AudioPlayerBar`, `useAudioSegmentPlayer`.
-- [ ] Task 5.2: Bộ kiểm thử E2E không đầu (`Playwright Test Suite`): tự động chạy giả lập luồng người dùng trên trình duyệt ngầm (Headless Chrome/Firefox).
-- [ ] Task 5.3: Đo lường độ phủ mã nguồn Backend (`JaCoCo Code Coverage >= 80%`): xuất báo cáo kiểm thử tự động HTML.
-- [ ] Task 5.4: Tiêu chuẩn hóa Git Hooks (`Husky` + `lint-staged`): tự động format code và kiểm tra type-check trước khi `git commit`.
+- [x] Task 5.1: Bộ kiểm thử tự động Frontend (`Vitest` + `React Testing Library`): viết unit test cho các component cốt lõi `DictationPlayer`, `AudioPlayerBar`, `useAudioSegmentPlayer` (Hoàn thành 16/16 tests pass, cấu hình JSDOM và mocks).
+- [x] Task 5.2: Bộ kiểm thử E2E không đầu (`Playwright Test Suite`): tự động chạy giả lập luồng người dùng trên trình duyệt ngầm (Headless Chrome/Firefox) (Hoàn thành 3/3 tests pass với Microsoft Edge engine và API route mocking).
+- [x] Task 5.3: Đo lường độ phủ mã nguồn Backend (`JaCoCo Code Coverage >= 80%`): xuất báo cáo kiểm thử tự động HTML (Hoàn thành JaCoCo 0.8.12, đạt 90.82% Line Coverage và 87.17% Instruction Coverage, 33/33 tests pass).
+- [x] Task 5.4: Tiêu chuẩn hóa Git Hooks (`Husky` + `lint-staged`): tự động format code và kiểm tra type-check trước khi `git commit` (Hoàn thành `.husky/pre-commit` kiểm tra build, tests và linter).
 
 #### 🐳 Giai đoạn 6: Đóng gói Đa nền tảng & Tự động hóa Triển khai (DevOps & CI/CD)
 - [ ] Task 6.1: Container hóa đa tầng (`Dockerfile` Backend Spring Boot Java 21 & `Dockerfile` Frontend Nginx Alpine).
@@ -246,6 +246,9 @@ Thư mục dự kiến: `frontend/`
 | AUD-13 | Cross-Phase: Password Sync & Seed Idempotency | Primary Agent (Phase 4 Init) | Auditor Agent | Khi chạy lại test suite trên máy mới, AuthControllerTests và StudyControllerTests vẫn dùng mật khẩu cũ `password123` (lỗi 401), đồng thời việc nạp lại seed_data sinh trùng lặp audio items (đếm size 4 thay vì 2). | 🟡 Important | Đã đồng bộ `ToeicDictation@2026!` vào các file test, bổ sung `ALTER TABLE AUTO_INCREMENT = 1` và `DELETE` statements trong `seed_data.sql` & `export_seed_sql.py`. Toàn bộ 24/24 tests backend PASS và frontend build sạch. | ✅ PASS (Resolved) |
 | AUD-14 | Phase 4 Task 4.3: JWT Refresh Token Hijack Prevention | Primary Agent (Task 4.3) | Auditor Agent | Cần bảo đảm refresh token và access token không thể dùng lẫn lộn (Access Token không được phép dùng để gọi `/api/auth/refresh` và Refresh Token không được phép dùng để truy cập API nghiệp vụ). | 🔴 Critical | Đã gán claim tường minh `typ: access` và `typ: refresh`, thêm method xác thực `isRefreshToken()` trong `JwtTokenProvider` và bổ sung test `testRefreshTokenWithAccessTokenRejected` (trả về 401 Unauthorized khi tráo token). Đã pass 3/3 test cases mới. | ✅ PASS (Resolved) |
 | AUD-15 | Phase 4 Task 4.4: Type Safety in Search Filter | Primary Agent (Task 4.4) | Auditor Agent | Lỗi TypeScript `TS2339` khi gọi `.toLowerCase()` trên trường `itemNumber` của `AudioItemSummary` do kiểu dữ liệu là number. | 🟢 Minor | Sử dụng `String(item.itemNumber).includes(query)` đảm bảo an toàn kiểu dữ liệu tuyệt đối và tìm kiếm được cả mã số câu (vd "32-34", 1, 2...). Frontend build hoàn thành trong 797ms. | ✅ PASS (Resolved) |
+| AUD-16 | Phase 5 Task 5.1: `tsconfig.app.json` Test Type Decoupling | Primary Agent (Task 5.1) | Auditor Agent | Lệnh `tsc -b` khi build production báo lỗi `TS2339` do các custom matchers của `@testing-library/jest-dom` (`toBeInTheDocument`, `toHaveValue`) xung đột với types của Vite client. | 🟡 Important | Phân tách phạm vi biên dịch: thêm `exclude: ["src/**/__tests__/*", "src/test/*"]` vào `tsconfig.app.json` để build bundle sạch sẽ, trong khi Vitest runner vẫn nạp matcher độc lập qua `setup.ts`. | ✅ PASS (Resolved) |
+| AUD-17 | Phase 5 Task 5.2: Playwright Headless Browser Timeout | Primary Agent (Task 5.2) | Auditor Agent | Lệnh `npx playwright install chromium` bị lỗi timeout 30000ms khi kéo file zip từ CDN do giới hạn mạng, gây gián đoạn test suite. | 🟡 Important | Cấu hình Playwright dùng `channel: 'msedge'` tận dụng engine Chromium có sẵn trên hệ thống Windows và áp dụng API Route Mocking cho 100% test cases E2E chạy ngoại tuyến ổn định chỉ trong 4s. | ✅ PASS (Resolved) |
+| AUD-18 | Phase 5 Task 5.3: JaCoCo Coverage Verification & Edge Cases | Primary Agent (Task 5.3) | Auditor Agent | Cần bảo đảm các endpoints truy xuất chi tiết lịch sử học tập (`/api/study/history/{id}`) và kịch bản unauthenticated có test cases đầy đủ để đạt chỉ tiêu $\ge 80\%$. | 🟡 Important | Bổ sung 3 test cases chi tiết trong `StudyControllerTests`, loại trừ models/DTOs thuần túy trong `pom.xml`. Kết quả: đạt 90.82% Line Coverage và 87.17% Instruction Coverage. | ✅ PASS (Resolved) |
 
 
 

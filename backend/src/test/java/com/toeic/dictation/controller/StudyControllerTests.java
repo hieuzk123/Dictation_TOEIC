@@ -129,4 +129,55 @@ public class StudyControllerTests {
                 .andExpect(jsonPath("$[0].itemTitle").value("Office Supply Toner Order"))
                 .andExpect(jsonPath("$[0].part").value(3));
     }
+
+    @Test
+    @DisplayName("Should fetch detailed study history by id")
+    void testGetStudyHistoryDetail() throws Exception {
+        SegmentAnswerDto seg = SegmentAnswerDto.builder()
+                .segmentId(1L)
+                .wordAnswers(List.of(
+                        WordAnswerDto.builder().wordIndex(0).targetWord("Mark").userWord("Mark").build()
+                ))
+                .build();
+
+        SubmitStudyRequest req = SubmitStudyRequest.builder()
+                .itemId(1L)
+                .mode("MEDIUM")
+                .replaysCount(1)
+                .answers(List.of(seg))
+                .build();
+
+        MvcResult submitResult = mockMvc.perform(post("/api/study/submit")
+                .header("Authorization", "Bearer " + authToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Long historyId = objectMapper.readTree(submitResult.getResponse().getContentAsString()).get("historyId").asLong();
+
+        mockMvc.perform(get("/api/study/history/" + historyId)
+                .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(historyId))
+                .andExpect(jsonPath("$.item.id").value(1));
+    }
+
+    @Test
+    @DisplayName("Should return 404 for non-existent study history detail")
+    void testGetStudyHistoryDetailNotFound() throws Exception {
+        mockMvc.perform(get("/api/study/history/999999")
+                .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should reject history endpoints without token")
+    void testGetStudyHistoryWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/study/history"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/study/history/1"))
+                .andExpect(status().isUnauthorized());
+    }
 }
