@@ -47,48 +47,60 @@ Mọi lỗi phát sinh trong quá trình rà soát chéo giữa các Agent đề
 
 ---
 
-## 3. Những công việc đã hoàn thành (Phase 1)
+## 3. Kiến trúc Hệ thống & Thành phần Đã Hoàn Thành (Phases 1 - 7)
 
-### A. Thiết lập môi trường & Công cụ hệ thống
-1. **Node.js LTS (v24.12.0)**: Đã cài đặt và nạp vào `%PATH%` (hỗ trợ npx/npm cho Frontend và công cụ hỗ trợ).
-2. **Java Development Kit (JDK 21 LTS)**: Đã cài đặt và cấu hình sẵn sàng (`java 21.0.12`).
-3. **MySQL Server (Port 3306)**:
-   * Hỗ trợ đa môi trường: Script tiện ích `start_mysql.bat` tự động phát hiện và khởi chạy MySQL (tương thích cả MySQL 8.4 standalone lẫn XAMPP MariaDB/MySQL).
-   * Đã nạp thành công database `toeic_dictation`, cấu trúc schema 5 bảng và toàn bộ seed data.
+Dự án đã được thiết kế và hoàn thiện toàn diện ở mức **Production-Ready Digital Product** với 7 giai đoạn kỹ thuật:
 
-### B. Dữ liệu âm thanh & Transcript mẫu chuẩn ETS
-Đã tạo dữ liệu âm thanh chuẩn bản ngữ bằng Microsoft Azure Neural TTS (`edge-tts`):
-* **Part 3 (Questions 32-34)**:
-  * Chủ đề: *Office Supply Toner Order* (Hội thoại giữa nhân viên và quản lý văn phòng phẩm).
-  * Giọng đọc: Kết hợp 2 giọng nam/nữ bản ngữ tự nhiên (`en-US-JennyNeural` & `en-US-GuyNeural`).
-  * File: `data_pipeline/sample_data/ets2024_test1_part3_q32_34.mp3` & `.txt`.
-* **Part 4 (Questions 71-73)**:
-  * Chủ đề: *Airport Flight Delay Announcement* (Thông báo hoãn chuyến bay tại sân bay).
-  * Giọng đọc: Giọng phát thanh viên sân bay chuyên nghiệp (`en-US-AriaNeural`).
-  * File: `data_pipeline/sample_data/ets2024_test1_part4_q71_73.mp3` & `.txt`.
+### 🐍 Giai đoạn 1: Data Pipeline, Căn khớp Thời gian & Database Schema
+* **Mô hình AI**: Sử dụng `faster-whisper` (`base` model, int8 quantization) nhận diện chính xác mốc thời gian (start/end timestamp) của từng câu và từng từ.
+* **Bộ lọc từ vựng thông minh**: Tự động lọc từ chức năng (Stopwords) để gắn nhãn `is_keyword: true/false` cho từng token từ vựng, phục vụ cơ chế đục lỗ Cloze Test.
+* **Audio chuẩn bản ngữ**: Tích hợp Microsoft Azure Neural TTS (`edge-tts`) tạo âm thanh Part 3 (`en-US-JennyNeural` & `en-US-GuyNeural`) và Part 4 (`en-US-AriaNeural`).
+* **Database Schema**: 5 bảng chuẩn hóa MySQL (`users`, `toeic_tests`, `audio_items`, `audio_segments`, `study_histories`).
+* **Seed Data**: Đề thi `ETS 2024 - Test 1`, 2 bài nghe (Q32-34 & Q71-73), 12 segments kèm tokens JSON, và 2 tài khoản mẫu đã hash BCrypt: `demo_user` (ROLE_USER) và `admin` (ROLE_ADMIN).
 
-### C. Data Pipeline tự động căn khớp thời gian (`data_pipeline/`)
-* **`align_pipeline.py`**:
-  * Sử dụng mô hình `faster-whisper` (`base` model, int8 quantization) nhận diện chính xác mốc thời gian (start/end timestamp) của từng từ và từng câu.
-  * Tích hợp bộ lọc từ chức năng (Stopwords) thông minh để gắn cờ `is_keyword: true/false` cho từng token từ vựng, phục vụ cơ chế đục lỗ Cloze Test.
-  * Xuất ra các file dữ liệu JSON chuẩn tại `data_pipeline/output/`:
-    * `ets2024_test1_part3_q32_34.json` (7 câu, 83 từ có timestamp chi tiết).
-    * `ets2024_test1_part4_q71_73.json` (5 câu, 69 từ có timestamp chi tiết).
-* **`generate_sample_audio.py`**: Script sinh file âm thanh mẫu tự động.
-* **`export_seed_sql.py`**: Script đọc các file JSON từ pipeline và tự động xuất ra file seed SQL nạp thẳng vào MySQL.
+### ☕ Giai đoạn 2: Backend Spring Boot 3 Core APIs & Security
+* **Bảo mật & Phân quyền**: Spring Security 6, kiến trúc Stateless REST API, JWT Authentication (HMAC-SHA512). Phân quyền RBAC chặt chẽ giữa `ROLE_USER` và `ROLE_ADMIN`.
+* **Tối ưu hóa Database (JPA)**: Thiết lập quan hệ `FetchType.LAZY`, `@JsonIgnore` trên quan hệ ngược, truy vấn JPQL `findByIdWithSegments` dùng `LEFT JOIN FETCH` loại bỏ triệt để vấn đề N+1 query.
+* **Audio Streaming**: Static resource handler phân giải an toàn cross-platform đường dẫn thư mục `data_pipeline/sample_data/` sang URI tuyệt đối chuẩn xác qua endpoint `/audio/**`.
+* **Thuật toán Chấm điểm**: So khớp chuỗi ký tự theo chuẩn hóa chữ thường, loại bỏ dấu câu, tính toán tỷ lệ chính xác `accuracyRate`, phân loại từ sai/đúng và ghi nhận lịch sử học tập tức thì.
 
-### D. Cấu trúc Database Schema & Seed Data (`database/`)
-* **`database/schema.sql`**: Thiết kế chuẩn hóa 5 bảng:
-  1. `users`: Quản lý tài khoản, mã hóa BCrypt, phân quyền role.
-  2. `toeic_tests`: Quản lý đề theo năm (`year`) và số đề (`test_number`).
-  3. `audio_items`: Quản lý từng bài nghe Part 3/Part 4, file audio URL, thời lượng tổng.
-  4. `audio_segments`: Quản lý từng câu trong bài nghe, lưu `start_time`, `end_time`, `full_transcript`, `tokens_json`.
-  5. `study_histories`: Quản lý lịch sử nộp bài, điểm số accuracy, số lần nghe lại, chi tiết lỗi sai.
-* **`database/seed_data.sql`**: Đã nạp thành công:
-  * 1 Đề thi mẫu: `ETS 2024 - Test 1`.
-  * 2 Bài nghe: Part 3 (Q32-34) & Part 4 (Q71-73).
-  * 12 Segments kèm đầy đủ mốc thời gian và tokens.
-  * 1 Tài khoản mẫu: `demo_user` / `password123`.
+### ⚛️ Giai đoạn 3: Frontend React 18 + Vite + Tailwind CSS
+* **Design System Glassmorphism**: Tone màu EdTech sang trọng (Dark Slate-950, Emerald, Indigo, Purple), hiệu ứng làm mờ nền (backdrop blur) và border bóng kính cao cấp.
+* **Audio Engine Chuyên biệt**: Hook `useAudioSegmentPlayer` kẹp cứng giới hạn tua trong phạm vi segment `[startTime, endTime]`, tự động loop câu hoặc chuyển câu.
+* **Dictation Workspace**: 3 chế độ luyện tập:
+  * *Medium*: Đục lỗ các từ khóa chính (`is_keyword: true`).
+  * *Hard*: Đục lỗ toàn bộ các từ trong câu.
+  * *Full Sentence*: Luyện nghe và gõ toàn bộ câu tiếng Anh.
+* **Hệ thống Phím tắt (Hotkeys)**: `Space` / `Ctrl+Space` (Phát/Tạm dừng), `Enter` (Kiểm tra / Câu kế tiếp), `Ctrl+R` (Nghe lại câu), `Tab` (Chuyển nhanh giữa các ô input đục lỗ). Tự động nhận diện khi người dùng đang nhập text để không bị nuốt khoảng trắng.
+
+### 🛡️ Giai đoạn 4: Độ bền Sản phẩm & Bảo mật Nâng cao (Product Resilience)
+* **Auto-save LocalStorage**: Hook lưu tự động tiến độ làm bài với TTL 7 ngày, chống mất bài khi rớt mạng hoặc người học tải lại trang, huy hiệu trạng thái và nút "Làm lại từ đầu".
+* **Onboarding Guide & Shortcut Cheatsheet**: Modal hướng dẫn người mới, tự động mở khi lần đầu truy cập, gồm tab phím tắt và tab hướng dẫn phương pháp nghe chép.
+* **JWT Token Rotation**: Access Token ngắn hạn và Refresh Token 7 ngày với claim phân định rành mạch `typ: access` vs `typ: refresh`, tự động làm mới phiên ngầm (Silent Refresh Interceptor) mà không ngắt quãng buổi học.
+* **Tìm kiếm & Phân trang**: Thanh tìm kiếm debounce theo tiêu đề hoặc mã câu (vd: 32-34), tabs lọc Part 3/Part 4 và phân trang responsive.
+
+### 🧪 Giai đoạn 5: Đo lường Chất lượng & Testing (Quality Engineering)
+* **Unit Tests (Vitest)**: 23 unit tests cho các component cốt lõi (`DictationPlayer`, `AudioPlayerBar`, `AdminCmsModal`, `ErrorBoundary`, `storage`).
+* **E2E Tests (Playwright)**: 3 kịch bản kiểm thử luồng người dùng giả lập ngoại tuyến với API Route Mocking.
+* **Độ phủ Mã nguồn Backend**: JaCoCo Code Coverage đạt **> 90% Line Coverage**.
+* **Pre-commit Quality Gate (Husky)**: Tự động chạy TypeScript check, Vitest suite và Oxlint trước mọi commit.
+
+### 🐳 Giai đoạn 6: Đóng gói Triển khai & DevOps (CI/CD)
+* **Container hóa Đa tầng (Multi-stage)**: `backend/Dockerfile` đóng gói Eclipse Temurin 21 JRE, `frontend/Dockerfile` tối ưu hóa hai tầng (Node 22 build + Nginx Alpine) kèm reverse proxy `/api` và `/audio`.
+* **Docker Compose 1 Lệnh**: File `docker-compose.yml` gom cụm 3 services (`mysql`, `backend`, `frontend`), tự động nạp database qua `01-schema.sql` và `02-seed.sql`.
+* **CI/CD Tự động hóa**: Quy trình `ci/github-actions-ci.yml` kiểm thử tự động, build và xuất báo cáo kiểm thử khi tạo PR hoặc push vào nhánh `main`.
+* **Cấu hình Ngoại hóa**: Template `.env.example` và dynamic externalized configuration trong `application.yml`.
+
+### 📈 Giai đoạn 7: Vận hành, Giám sát & Quản trị Nội dung (Operations & Admin CMS)
+* **Giám sát Thời gian thực**: Spring Boot Actuator kết hợp Micrometer Prometheus xuất đầy đủ chỉ số JVM heap, CPU, HikariCP pool tại `/actuator/prometheus` và `/actuator/health`.
+* **Bắt lỗi Runtime**: Backend `GlobalExceptionHandler` bắt tập trung mọi lỗi và ghi nhận qua `SentryService`; Frontend tích hợp `ErrorBoundary` ngăn ngừa lỗi màn hình trắng (White Screen of Death).
+* **Tự động Sao lưu MySQL**: Script Windows (`scripts/backup_mysql.bat`) và Linux/Docker (`scripts/backup_mysql.sh`) tự động xuất file `.sql` có timestamp và xoay vòng xóa bản sao lưu cũ sau 7 ngày.
+* **Màn hình Quản trị Đề thi (Admin CMS Modal)**:
+  * Upload file MP3 kéo thả (Drag & Drop), bóc tách transcript tự động thành các câu và sinh tokens đục lỗ.
+  * Hỗ trợ giới hạn upload **50MB** (cấu hình multipart và tomcat max-swallow-size).
+  * **Tạo đề thi mới linh hoạt**: Cho phép giáo viên tạo đề thi ETS cho mọi năm (2022, 2023, 2025...) trực tiếp trên giao diện web hoặc tạo tự động khi upload.
+  * Xem 5 chỉ số thống kê hệ thống và quản lý xóa bài nghe.
+
 
 ---
 
@@ -144,7 +156,7 @@ Dictation_TOEIC/
 
 ## 5. Hướng dẫn thiết lập & Bàn giao khi kéo code về máy khác (Handover Guide)
 
-Khi bạn chuyển sang máy tính khác (laptop cá nhân, máy công ty, máy ảo, v.v.), hãy thực hiện theo đúng các bước tuần tự dưới đây để đảm bảo hệ thống chạy ngay mà không bị lệch tiến trình:
+Khi bạn chuyển sang máy tính khác (laptop cá nhân, máy công ty, máy ảo, v.v.), hãy thực hiện theo đúng các bước tuần tự dưới đây để đảm bảo hệ thống chạy ngay mà không bị xung đột tiến trình hoặc thiếu dữ liệu:
 
 ### 📥 Bước 1: Kéo mã nguồn về máy mới
 ```bash
@@ -153,45 +165,122 @@ cd Dictation_TOEIC
 ```
 
 ### ⚙️ Bước 2: Chuẩn bị môi trường phần mềm
-* **Git** & **Node.js** (LTS >= 18 hoặc 20+)
-* **JDK 17 hoặc 21 LTS** (Khuyên dùng OpenJDK 21)
-* **MySQL 8.x** hoặc **XAMPP (MariaDB/MySQL)** trên cổng 3306
-* **Python 3.10+** (Chỉ cần nếu muốn nạp thêm đề thi mới qua Whisper)
+* **Git** & **Node.js** (LTS >= 18 hoặc 20+, khuyến nghị v20+ / v22+)
+* **JDK 17 hoặc 21 LTS** (Khuyên dùng OpenJDK / Eclipse Temurin 21)
+* **MySQL 8.x** hoặc **XAMPP (MariaDB/MySQL)** trên cổng mặc định 3306
+* *(Tùy chọn)* **Docker Desktop** (nếu muốn khởi chạy 1 lệnh bằng Docker Compose)
+* *(Tùy chọn)* **Python 3.10+** (chỉ cần nếu muốn chạy lại pipeline Whisper trích xuất transcript offline)
 
-### 🗄️ Bước 3: Khởi động & Nạp Cơ sở dữ liệu
-1. **Khởi động MySQL**:
-   * Nếu dùng Windows: Nhấp đúp chạy script tiện ích `start_mysql.bat` (tự động nhận diện XAMPP `D:\xampp\mysql` hoặc MySQL standalone).
-   * Hoặc khởi động MySQL Service qua XAMPP Control Panel / Services.msc.
-2. **Nạp Schema & Dữ liệu mẫu**:
+### 🔑 Bảng Tài Khoản Mẫu Nạp Sẵn Trong Hệ Thống (Seed Accounts)
+Hệ thống đã mã hóa mật khẩu theo chuẩn BCrypt mạnh và nạp sẵn 2 tài khoản phục vụ trải nghiệm và kiểm thử:
+
+| Vai trò | Tên đăng nhập (Username) | Mật khẩu (Password) | Quyền hạn (Role) | Chức năng chính |
+|---|---|---|---|---|
+| **Học viên Demo** | `demo_user` | `ToeicDictation@2026!` | `ROLE_USER` | Luyện nghe chép chính tả 3 chế độ (Medium, Hard, Full), tự động lưu tiến độ, xem kết quả và lịch sử làm bài. |
+| **Quản trị viên / Giáo viên** | `admin` | `ToeicDictation@2026!` | `ROLE_ADMIN` | Mở menu **Admin CMS**, tạo đề thi ETS mới mọi năm (2022, 2023, 2025...), upload file MP3 + transcript kéo thả, xem 5 chỉ số thống kê KPI và xóa bài nghe. |
+
+*(Trên giao diện web, modal đăng nhập `AuthModal` đã tích hợp sẵn **2 nút 1-click** tiện ích: "Học viên (Demo)" và "Giáo viên (Admin)" để đăng nhập ngay mà không cần gõ phím).*
+
+---
+
+### 🚀 Cách Khởi Động Hệ Thống (Chọn 1 trong 2 phương thức)
+
+#### 🔹 Phương thức A: Khởi chạy Cục bộ (Local Development - Khuyên dùng khi Lập trình & Sửa lỗi)
+
+1. **Khởi động MySQL (Cổng 3306)**:
+   * Nếu dùng Windows: Nhấp đúp chạy script tiện ích `start_mysql.bat` (tự động phát hiện MySQL 8.4 hoặc XAMPP `D:\xampp\mysql`).
+   * Hoặc bật MySQL service qua XAMPP Control Panel / Services.msc.
+2. **Nạp Schema & Dữ liệu mẫu (Chỉ cần chạy 1 lần khi mới cài máy)**:
    ```powershell
    # Mở terminal tại thư mục gốc Dictation_TOEIC:
    Get-Content database/schema.sql | mysql -u root
    Get-Content database/seed_data.sql | mysql -u root toeic_dictation
    ```
-   *(Tài khoản mẫu đã nạp sẵn: `demo_user` / `ToeicDictation@2026!`)*
+3. **Khởi động Backend Spring Boot 3**:
+   ```powershell
+   cd backend
+   # Windows:
+   .\mvnw.cmd spring-boot:run
+   # macOS / Linux:
+   ./mvnw spring-boot:run
+   ```
+   *Backend sẽ lắng nghe tại `http://localhost:8080`, cung cấp REST API và audio streaming `/audio/**`.*
+4. **Khởi động Frontend React 18 + Vite**:
+   Mở một cửa sổ terminal mới:
+   ```powershell
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   *Mở trình duyệt truy cập `http://localhost:5173` (hoặc cổng được Vite hiển thị).*
 
-### ☕ Bước 4: Khởi động Backend Spring Boot 3
+#### 🔹 Phương thức B: Khởi chạy 1 Lệnh Duy Nhất với Docker (Khuyên dùng khi Demo hoặc Chạy Nhanh)
+
+Nếu máy tính mới đã cài Docker Desktop, bạn chỉ cần gõ duy nhất 1 lệnh tại thư mục gốc:
+```bash
+docker compose up -d
+```
+Docker sẽ tự động kích hoạt cụm 3 containers: `mysql` (khởi tạo schema + seed tự động) $\rightarrow$ `backend` (Spring Boot Java 21) $\rightarrow$ `frontend` (Nginx Alpine reverse proxy). Truy cập ngay tại `http://localhost`.
+
+---
+
+### 🧪 Bộ Lệnh Kiểm Thử & Đo Lường Chất Lượng (Bắt buộc chạy trước khi Commit)
+
+Để bảo đảm máy mới không bị lệch logic hoặc hồi quy (regression) mã nguồn:
+
 ```powershell
+# 1. Kiểm thử toàn bộ Backend & Đo lường JaCoCo Coverage:
 cd backend
-# Windows:
-.\mvnw.cmd spring-boot:run
-# macOS / Linux:
-./mvnw spring-boot:run
-```
-*Backend sẽ lắng nghe tại `http://localhost:8080`, cung cấp REST API và audio stream `/audio/**`.*
+.\mvnw.cmd test
+# Xác nhận: 41/41 tests PASS, JaCoCo Line Coverage > 90%
 
-### ⚛️ Bước 5: Khởi động Frontend React 18 + Vite
-Mở một cửa sổ terminal mới:
-```powershell
-cd frontend
-npm install
-npm run dev
+# 2. Kiểm thử Unit Frontend (Vitest):
+cd ../frontend
+npm run test
+# Xác nhận: 23/23 tests PASS
+
+# 3. Kiểm thử Luồng người dùng E2E (Playwright Headless):
+npm run test:e2e
+# Xác nhận: 3/3 tests PASS (Edge/Chromium offline mocking)
+
+# 4. Kiểm tra Linter & Biên dịch Production Build:
+npm run lint
+npm run build
+# Xác nhận: 0 lỗi lint, build bundle sạch trong < 1 giây
 ```
-*Mở trình duyệt truy cập `http://localhost:5173` (hoặc `http://localhost:5174`), đăng nhập bằng nút tiện ích Demo để trải nghiệm ngay.*
+
+---
+
+### 💾 Công Cụ Sao Lưu Dữ Liệu Tự Động (MySQL Backup)
+
+Hệ thống cung cấp sẵn công cụ sao lưu dữ liệu an toàn có cơ chế xoay vòng 7 ngày:
+* **Windows**: Nhấp đúp chạy `scripts/backup_mysql.bat` (tự động nhận diện `mysqldump`, xuất file `backups/backup_toeic_dictation_YYYYMMDD_HHMMSS.sql`, tự động xóa bản sao lưu cũ hơn 7 ngày).
+* **Linux / Docker**: Chạy `bash scripts/backup_mysql.sh` (tự động nén `gzip` và xoay vòng bản ghi).
+
+---
+
+### 🩺 Giám Sát Sức Khỏe & Chỉ Số Hiệu Năng (Monitoring & Metrics)
+
+Khi backend đang hoạt động, bạn có thể kiểm tra trực tiếp:
+* **Kiểm tra Sức khỏe Hệ thống**: `http://localhost:8080/actuator/health` (trả về `{ "status": "UP", "db": "UP", "diskSpace": "UP" }`).
+* **Xuất Chỉ số Prometheus**: `http://localhost:8080/actuator/prometheus` (xuất thông số JVM memory, HikariCP connection pool, CPU, latency).
+
+---
+
+### ⚠️ Sổ Tay Xử Lý Sự Cố Nhanh Trên Máy Mới (Troubleshooting & Quick Fixes)
+
+1. **Xung đột cổng MySQL (3306)**: Nếu máy đã chạy sẵn một MySQL instance hoặc MariaDB khác, hãy kiểm tra bằng lệnh `netstat -ano | findstr :3306`. Bạn có thể thay đổi biến môi trường `SPRING_DATASOURCE_URL` trong file `.env` hoặc file [application.yml](file:///d:/Dictation_TOEIC/backend/src/main/resources/application.yml).
+2. **Ký tự `$` trong PowerShell**: Khi thực thi lệnh chèn dữ liệu hoặc CURL qua PowerShell, ký tự `$` trong chuỗi BCrypt hash (ví dụ `$2a$10$...`) có thể bị PowerShell hiểu nhầm là biến môi trường rỗng. **Giải pháp**: Luôn bọc chuỗi trong dấu nháy đơn `'...'` hoặc sử dụng script SQL / API client chuyên dụng.
+3. **Upload file âm thanh lớn**: Giới hạn upload file MP3 hiện tại đã được cấu hình lên đến **50MB** tại [application.yml](file:///d:/Dictation_TOEIC/backend/src/main/resources/application.yml) (`spring.servlet.multipart.max-file-size: 50MB` và `server.tomcat.max-swallow-size: 50MB`). Không upload file vượt quá 50MB.
+4. **Husky Pre-commit Hook**: Dự án đã tích hợp Git Hook tại `.husky/pre-commit` để tự động kiểm tra code trước khi `git commit`. Nếu máy mới báo lỗi quyền thực thi hook trên Linux/macOS, hãy chạy: `chmod +x .husky/pre-commit`.
+
+---
 
 ### 🤖 Bước 6: Cách ra lệnh cho AI Agent trên máy mới để KHÔNG làm sai tiến trình
-Khi bạn mở dự án trên IDE ở máy mới (hoặc bắt đầu session mới với AI), hãy dán câu lệnh tiêu chuẩn sau vào ô chat:
-> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án đã hoàn thành 100% trọn vẹn toàn bộ 7 Giai đoạn từ Giai đoạn 1 đến Giai đoạn 7 (Data Pipeline, Backend Spring Boot 3 & 39 Tests, Frontend React 18 & 22 Unit Tests + 3 E2E Tests, Product Resilience & JWT Rotation, Testing & JaCoCo 90.8% Coverage, DevOps Multi-stage Docker Compose & CI/CD, và Vận hành Giám sát Actuator/Prometheus, Sentry, MySQL Backup, Admin CMS Upload MP3). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và hỗ trợ mở rộng, bảo trì hoặc phát triển tính năng mới theo yêu cầu."*
+
+Khi bạn mở dự án trên IDE ở máy mới (hoặc bắt đầu session mới với AI), hãy copy & paste câu lệnh tiêu chuẩn sau vào ô chat:
+> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án TOEIC Dictation đã hoàn thành 100% trọn vẹn toàn bộ 7 Giai đoạn từ Giai đoạn 1 đến Giai đoạn 7 (Data Pipeline, Backend Spring Boot 3 & 41 Tests, Frontend React 18 & 23 Unit Tests + 3 E2E Tests, Product Resilience & JWT Rotation, Testing & JaCoCo >90% Coverage, DevOps Multi-stage Docker Compose & CI/CD, và Vận hành Giám sát Actuator/Prometheus, Sentry, MySQL Backup, Admin CMS Upload MP3 50MB & Tạo đề thi mới mọi năm). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và hỗ trợ mở rộng, bảo trì hoặc phát triển tính năng mới theo yêu cầu."*
+
 
 ---
 
