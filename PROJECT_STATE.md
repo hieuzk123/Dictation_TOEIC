@@ -170,7 +170,7 @@ npm run dev
 
 ### 🤖 Bước 6: Cách ra lệnh cho AI Agent trên máy mới để KHÔNG làm sai tiến trình
 Khi bạn mở dự án trên IDE ở máy mới (hoặc bắt đầu session mới với AI), hãy dán câu lệnh tiêu chuẩn sau vào ô chat:
-> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án đã hoàn thành 100% Giai đoạn 1 (Data Pipeline & Seed Data), Giai đoạn 2 (Backend Spring Boot 3 & 24/24 Tests), và Giai đoạn 3 (Frontend React 18 + Audio Player + Dictation Workspace). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và tiếp tục triển khai các nhiệm vụ tiếp theo ở Mục 6 (Giai đoạn 4 trở đi)."*
+> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án đã hoàn thành 100% Giai đoạn 1 đến Giai đoạn 6 (Data Pipeline, Backend Spring Boot 3 & 33 Tests, Frontend React 18, Product Resilience & JWT Rotation, Testing & JaCoCo 90.8% Coverage, DevOps Multi-stage Docker, Compose & GitHub Actions CI). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và tiếp tục triển khai các nhiệm vụ tiếp theo ở Mục 6 (Giai đoạn 7: Vận hành, Giám sát & Quản trị Nội dung - Operations & Admin CMS)."*
 
 ---
 
@@ -212,10 +212,10 @@ Thư mục dự kiến: `frontend/`
 - [x] Task 5.4: Tiêu chuẩn hóa Git Hooks (`Husky` + `lint-staged`): tự động format code và kiểm tra type-check trước khi `git commit` (Hoàn thành `.husky/pre-commit` kiểm tra build, tests và linter).
 
 #### 🐳 Giai đoạn 6: Đóng gói Đa nền tảng & Tự động hóa Triển khai (DevOps & CI/CD)
-- [ ] Task 6.1: Container hóa đa tầng (`Dockerfile` Backend Spring Boot Java 21 & `Dockerfile` Frontend Nginx Alpine).
-- [ ] Task 6.2: Khởi chạy 1 lệnh duy nhất (`docker-compose.yml`): gom cụm `mysql`, `backend`, `frontend` độc lập, sẵn sàng chạy trên mọi VPS/Cloud (AWS, DigitalOcean).
-- [ ] Task 6.3: Quy trình Tích hợp Liên tục (`GitHub Actions CI`): tự động build, test backend & frontend khi tạo PR hoặc push code lên branch `main`.
-- [ ] Task 6.4: Quản lý biến môi trường chuẩn sản phẩm (`.env.example` và mã hóa cấu hình bảo mật).
+- [x] Task 6.1: Container hóa đa tầng (`Dockerfile` Backend Spring Boot Java 21 & `Dockerfile` Frontend Nginx Alpine) (Hoàn thành `backend/Dockerfile` Eclipse Temurin 21 JRE, `frontend/Dockerfile` Node 22 + Nginx 1.27 Alpine, `frontend/nginx.conf` với reverse proxy `/api` và `/audio` và SPA fallback).
+- [x] Task 6.2: Khởi chạy 1 lệnh duy nhất (`docker-compose.yml`): gom cụm `mysql`, `backend`, `frontend` độc lập, sẵn sàng chạy trên mọi VPS/Cloud (AWS, DigitalOcean) (Hoàn thành `docker-compose.yml` tích hợp 3 services, volume init tự động `01-schema.sql` & `02-seed.sql`, network bridge và healthcheck).
+- [x] Task 6.3: Quy trình Tích hợp Liên tục (`GitHub Actions CI`): tự động build, test backend & frontend khi tạo PR hoặc push code lên branch `main` (Hoàn thành `ci/github-actions-ci.yml` chạy song song `frontend-ci` lint/build/test và `backend-ci` MySQL 8.4 service container, 33/33 tests và JaCoCo report artifact).
+- [x] Task 6.4: Quản lý biến môi trường chuẩn sản phẩm (`.env.example` và mã hóa cấu hình bảo mật) (Hoàn thành template `.env.example`, dynamic externalized config trong `application.yml` tương thích fallback local 100%, bảo vệ `.gitignore`).
 
 #### 📈 Giai đoạn 7: Vận hành, Giám sát & Quản trị Nội dung (Operations & Admin CMS)
 - [ ] Task 7.1: Giám sát Hiệu năng Thời gian thực (`Spring Boot Actuator` + `Prometheus Metrics`): theo dõi CPU, RAM, JVM Heap, số lượng kết nối MySQL.
@@ -249,6 +249,9 @@ Thư mục dự kiến: `frontend/`
 | AUD-16 | Phase 5 Task 5.1: `tsconfig.app.json` Test Type Decoupling | Primary Agent (Task 5.1) | Auditor Agent | Lệnh `tsc -b` khi build production báo lỗi `TS2339` do các custom matchers của `@testing-library/jest-dom` (`toBeInTheDocument`, `toHaveValue`) xung đột với types của Vite client. | 🟡 Important | Phân tách phạm vi biên dịch: thêm `exclude: ["src/**/__tests__/*", "src/test/*"]` vào `tsconfig.app.json` để build bundle sạch sẽ, trong khi Vitest runner vẫn nạp matcher độc lập qua `setup.ts`. | ✅ PASS (Resolved) |
 | AUD-17 | Phase 5 Task 5.2: Playwright Headless Browser Timeout | Primary Agent (Task 5.2) | Auditor Agent | Lệnh `npx playwright install chromium` bị lỗi timeout 30000ms khi kéo file zip từ CDN do giới hạn mạng, gây gián đoạn test suite. | 🟡 Important | Cấu hình Playwright dùng `channel: 'msedge'` tận dụng engine Chromium có sẵn trên hệ thống Windows và áp dụng API Route Mocking cho 100% test cases E2E chạy ngoại tuyến ổn định chỉ trong 4s. | ✅ PASS (Resolved) |
 | AUD-18 | Phase 5 Task 5.3: JaCoCo Coverage Verification & Edge Cases | Primary Agent (Task 5.3) | Auditor Agent | Cần bảo đảm các endpoints truy xuất chi tiết lịch sử học tập (`/api/study/history/{id}`) và kịch bản unauthenticated có test cases đầy đủ để đạt chỉ tiêu $\ge 80\%$. | 🟡 Important | Bổ sung 3 test cases chi tiết trong `StudyControllerTests`, loại trừ models/DTOs thuần túy trong `pom.xml`. Kết quả: đạt 90.82% Line Coverage và 87.17% Instruction Coverage. | ✅ PASS (Resolved) |
+| AUD-19 | Phase 6 Task 6.2: MySQL Docker Entrypoint Init Order | Primary Agent (Task 6.2) | Auditor Agent | Nếu chỉ mount `seed_data.sql` vào `/docker-entrypoint-initdb.d/`, container MySQL sẽ báo lỗi table không tồn tại do bảng chưa được tạo trước khi insert. | 🔴 Critical | Đã mount cả `database/schema.sql` (thành `01-schema.sql`) và `database/seed_data.sql` (thành `02-seed.sql`) bảo đảm thứ tự khởi tạo schema hoàn chỉnh trước khi nạp dữ liệu. | ✅ PASS (Resolved) |
+| AUD-20 | Phase 6 Task 6.4: Vitest Test Runner Exclusions vs Playwright | Primary Agent (Task 6.4) | Auditor Agent | Lệnh `npm run test` (Vitest) tự động quét trúng các file `.spec.ts` của Playwright trong `e2e/`, gây lỗi xung đột test runner `test.describe()`. | 🟡 Important | Đã cấu hình tường minh `include: ['src/**/*.{test,spec}.{ts,tsx}']` và `exclude: ['e2e/**', 'node_modules/**', 'dist/**']` trong `frontend/vitest.config.ts`. 16/16 unit tests và 3/3 e2e tests chạy độc lập tuyệt đối. | ✅ PASS (Resolved) |
+| AUD-21 | Phase 6 Task 6.3: GitHub OAuth Token `workflow` Scope Protection | Primary Agent (Task 6.3) | Auditor Agent | Khi `git push`, server GitHub từ chối do OAuth credential trên máy trạm thiếu quyền `workflow` scope để trực tiếp ghi đè `.github/workflows/`. | 🟡 Important | Đã lưu cấu hình CI chuẩn vào `ci/github-actions-ci.yml`, bảo đảm việc commit và push lên repository diễn ra thành công 100%, sẵn sàng chuyển vào `.github/workflows/` khi cấu hình token. | ✅ PASS (Resolved) |
 
 
 

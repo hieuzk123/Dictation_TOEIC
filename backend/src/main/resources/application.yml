@@ -1,13 +1,13 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: toeic-dictation-api
   datasource:
-    url: jdbc:mysql://localhost:3306/toeic_dictation?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    username: root
-    password: 
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/toeic_dictation?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     open-in-view: false
@@ -19,8 +19,8 @@ spring:
         format_sql: true
 
 jwt:
-  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-  expiration-ms: 604800000 # 7 days in milliseconds
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  expiration-ms: ${JWT_EXPIRATION_MS:604800000} # 7 days in milliseconds
 
 app:
-  audio-dir: ../data_pipeline/sample_data/
+  audio-dir: ${APP_AUDIO_DIR:../data_pipeline/sample_data/}

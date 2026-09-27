@@ -1,0 +1,10 @@
+target/
+.git/
+.mvn/
+*.cmd
+*.bat
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.log

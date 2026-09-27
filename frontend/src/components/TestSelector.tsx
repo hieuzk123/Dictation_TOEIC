@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { ToeicTest, AudioItemSummary } from '../types';
 import { ItemCard } from './ItemCard';
 import {
@@ -36,10 +36,15 @@ export const TestSelector: React.FC<TestSelectorProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Reset to page 1 whenever filter or search query changes
-  useEffect(() => {
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
     setCurrentPage(1);
-  }, [activePartFilter, searchQuery]);
+  };
+
+  const handlePartFilterChange = (part: 'ALL' | 3 | 4) => {
+    setActivePartFilter(part);
+    setCurrentPage(1);
+  };
 
   // Filter items based on active Part and search query
   const filteredItems = useMemo(() => {
@@ -136,13 +141,13 @@ export const TestSelector: React.FC<TestSelectorProps> = ({
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Tìm theo tiêu đề, số câu (vd: Toner, Delay, 32-34)..."
               className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-input text-xs font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-all"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => handleSearchChange('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                 title="Xóa tìm kiếm"
               >
@@ -154,7 +159,7 @@ export const TestSelector: React.FC<TestSelectorProps> = ({
           {/* Part Filter Tabs */}
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-slate-800 self-start md:self-auto">
             <button
-              onClick={() => setActivePartFilter('ALL')}
+              onClick={() => handlePartFilterChange('ALL')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activePartFilter === 'ALL'
                   ? 'bg-brand-600 text-white shadow-sm'
@@ -164,7 +169,7 @@ export const TestSelector: React.FC<TestSelectorProps> = ({
               Tất cả
             </button>
             <button
-              onClick={() => setActivePartFilter(3)}
+              onClick={() => handlePartFilterChange(3)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activePartFilter === 3
                   ? 'bg-indigo-600 text-white shadow-sm'
@@ -174,7 +179,7 @@ export const TestSelector: React.FC<TestSelectorProps> = ({
               Part 3 (Hội thoại)
             </button>
             <button
-              onClick={() => setActivePartFilter(4)}
+              onClick={() => handlePartFilterChange(4)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activePartFilter === 4
                   ? 'bg-emerald-600 text-white shadow-sm'

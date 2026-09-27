@@ -1,0 +1,72 @@
+# ========================================================
+# Docker Compose Orchestration: TOEIC Dictation System
+# 1-Command Startup: docker compose up --build -d
+# ========================================================
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: toeic-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ToeicDictation@2026!}
+      MYSQL_DATABASE: toeic_dictation
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed_data.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - toeic-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: toeic-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/toeic_dictation?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ToeicDictation@2026!}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-604800000}
+      APP_AUDIO_DIR: /app/data/sample_data/
+    volumes:
+      - ./data_pipeline/sample_data:/app/data/sample_data:ro
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    networks:
+      - toeic-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: toeic-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - toeic-network
+
+networks:
+  toeic-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

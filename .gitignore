@@ -23,6 +23,7 @@ wheels/
 venv/
 ENV/
 .env
+.env*.local
 
 # Huggingface Cache
 .cache/
