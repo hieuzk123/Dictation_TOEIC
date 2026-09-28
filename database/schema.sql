@@ -11,6 +11,7 @@ USE `toeic_dictation`;
 
 -- Drop tables if exists (in reverse dependency order)
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `toeic_questions`;
 DROP TABLE IF EXISTS `study_histories`;
 DROP TABLE IF EXISTS `audio_segments`;
 DROP TABLE IF EXISTS `audio_items`;
@@ -97,3 +98,22 @@ CREATE TABLE `study_histories` (
   INDEX `idx_history_user` (`user_id`),
   INDEX `idx_history_item` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6. Table: toeic_questions
+CREATE TABLE `toeic_questions` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `item_id` BIGINT NOT NULL,
+  `question_number` INT NOT NULL COMMENT 'e.g. 32, 33, 34 or 71, 72, 73',
+  `question_text` TEXT NOT NULL,
+  `option_a` TEXT NOT NULL,
+  `option_b` TEXT NOT NULL,
+  `option_c` TEXT NOT NULL,
+  `option_d` TEXT NOT NULL,
+  `correct_option` VARCHAR(5) NOT NULL COMMENT 'A, B, C, D',
+  `explanation` TEXT DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`item_id`) REFERENCES `audio_items` (`id`) ON DELETE CASCADE,
+  INDEX `idx_questions_item` (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
