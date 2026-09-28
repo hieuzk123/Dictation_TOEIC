@@ -118,6 +118,7 @@ Dictation_TOEIC/
 ├── PROJECT_STATE.md                # Báo cáo trạng thái dự án hiện tại & Quy trình kiểm toán
 ├── toeic_dictation_prompt.md       # Master Prompt nghiệp vụ & kiến trúc ban đầu
 ├── start_mysql.bat                 # Script chạy nhanh MySQL Server cục bộ (đa môi trường)
+├── stop_services.bat               # Script dừng nhanh toàn bộ dịch vụ (8080, 5173, 3306) & giải phóng RAM
 │
 ├── ci/                             # CI/CD Tự động hóa
 │   └── github-actions-ci.yml       # Quy trình GitHub Actions CI (Test, Coverage, Build)
@@ -277,6 +278,28 @@ Khi backend đang hoạt động, bạn có thể kiểm tra trực tiếp:
 2. **Ký tự `$` trong PowerShell**: Khi thực thi lệnh chèn dữ liệu hoặc CURL qua PowerShell, ký tự `$` trong chuỗi BCrypt hash (ví dụ `$2a$10$...`) có thể bị PowerShell hiểu nhầm là biến môi trường rỗng. **Giải pháp**: Luôn bọc chuỗi trong dấu nháy đơn `'...'` hoặc sử dụng script SQL / API client chuyên dụng.
 3. **Upload file âm thanh lớn**: Giới hạn upload file MP3 hiện tại đã được cấu hình lên đến **50MB** tại [application.yml](file:///d:/Dictation_TOEIC/backend/src/main/resources/application.yml) (`spring.servlet.multipart.max-file-size: 50MB` và `server.tomcat.max-swallow-size: 50MB`). Không upload file vượt quá 50MB.
 4. **Husky Pre-commit Hook**: Dự án đã tích hợp Git Hook tại `.husky/pre-commit` để tự động kiểm tra code trước khi `git commit`. Nếu máy mới báo lỗi quyền thực thi hook trên Linux/macOS, hãy chạy: `chmod +x .husky/pre-commit`.
+
+---
+
+### 🛑 Cách Tắt Toàn Bộ Hệ Thống & Giải Phóng RAM (Shutdown & Free Resources)
+
+Khi bạn đã hoàn thành phiên học/kiểm thử và muốn tắt toàn bộ tiến trình để giải phóng RAM:
+
+* **Cách 1 (1-Click - Khuyên Dùng)**:
+  Nhấp đúp chuột chạy file [stop_services.bat](file:///d:/Dictation_TOEIC/stop_services.bat) ở thư mục gốc dự án. Script sẽ tự động ngắt kết nối cổng `8080` (Spring Boot), cổng `5173` (Vite) và hỏi bạn có muốn tắt luôn MySQL `mysqld.exe` hay không.
+* **Cách 2 (1 Dòng Lệnh PowerShell)**:
+  ```powershell
+  # Đóng sạch các tiến trình đang chiếm cổng 8080 và 5173:
+  Get-NetTCPConnection -LocalPort 8080, 5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+  # (Tùy chọn) Tắt tiến trình MySQL:
+  taskkill /F /IM mysqld.exe
+  ```
+* **Cách 3 (Nếu chạy qua Docker Compose)**:
+  ```bash
+  docker compose down
+  ```
+* **Cách 4 (Nếu đang mở cửa sổ Terminal)**:
+  Chỉ cần nhấn tổ hợp phím `Ctrl + C` tại các cửa sổ terminal đang chạy Backend và Frontend.
 
 ---
 
