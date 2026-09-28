@@ -51,4 +51,9 @@ public class AudioItem {
     @OrderBy("segmentIndex ASC")
     @Builder.Default
     private List<AudioSegment> segments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("questionNumber ASC")
+    @Builder.Default
+    private List<ToeicQuestion> questions = new ArrayList<>();
 }

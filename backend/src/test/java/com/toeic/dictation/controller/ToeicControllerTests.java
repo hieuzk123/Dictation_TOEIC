@@ -98,4 +98,16 @@ public class ToeicControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", containsString("audio")));
     }
+
+    @Test
+    @DisplayName("GET /api/items/{id} should return questions array for the audio item")
+    void testGetItemDetailWithQuestions() throws Exception {
+        mockMvc.perform(get("/api/items/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions", notNullValue()))
+                .andExpect(jsonPath("$.questions", hasSize(greaterThanOrEqualTo(3))))
+                .andExpect(jsonPath("$.questions[0].questionText", notNullValue()))
+                .andExpect(jsonPath("$.questions[0].optionA", notNullValue()));
+    }
 }
+

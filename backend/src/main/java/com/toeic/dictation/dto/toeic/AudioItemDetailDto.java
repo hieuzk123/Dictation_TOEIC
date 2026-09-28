@@ -22,4 +22,6 @@ public class AudioItemDetailDto {
     private Integer totalSegments;
     @Builder.Default
     private List<AudioSegmentDto> segments = new ArrayList<>();
+    @Builder.Default
+    private List<ToeicQuestionDto> questions = new ArrayList<>();
 }

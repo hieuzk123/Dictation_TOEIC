@@ -6,12 +6,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.toeic.dictation.dto.toeic.AudioItemDetailDto;
 import com.toeic.dictation.dto.toeic.AudioItemSummaryDto;
 import com.toeic.dictation.dto.toeic.AudioSegmentDto;
+import com.toeic.dictation.dto.toeic.ToeicQuestionDto;
 import com.toeic.dictation.dto.toeic.ToeicTestDto;
 import com.toeic.dictation.model.AudioItem;
 import com.toeic.dictation.model.AudioSegment;
+import com.toeic.dictation.model.ToeicQuestion;
 import com.toeic.dictation.model.ToeicTest;
 import com.toeic.dictation.repository.AudioItemRepository;
 import com.toeic.dictation.repository.AudioSegmentRepository;
+import com.toeic.dictation.repository.ToeicQuestionRepository;
 import com.toeic.dictation.repository.ToeicTestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +34,7 @@ public class ToeicService {
     private final ToeicTestRepository toeicTestRepository;
     private final AudioItemRepository audioItemRepository;
     private final AudioSegmentRepository audioSegmentRepository;
+    private final ToeicQuestionRepository toeicQuestionRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -72,8 +76,10 @@ public class ToeicService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Audio item not found with id: " + id));
 
         List<AudioSegment> segments = audioSegmentRepository.findByItemIdOrderBySegmentIndexAsc(item.getId());
-
         List<AudioSegmentDto> segmentDtos = segments.stream().map(this::mapSegmentDto).collect(Collectors.toList());
+
+        List<ToeicQuestion> questions = toeicQuestionRepository.findByItemIdOrderByQuestionNumberAsc(item.getId());
+        List<ToeicQuestionDto> questionDtos = questions.stream().map(this::mapQuestionDto).collect(Collectors.toList());
 
         return AudioItemDetailDto.builder()
                 .id(item.getId())
@@ -86,6 +92,20 @@ public class ToeicService {
                 .totalDuration(item.getTotalDuration())
                 .totalSegments(segments.size())
                 .segments(segmentDtos)
+                .questions(questionDtos)
+                .build();
+    }
+
+    private ToeicQuestionDto mapQuestionDto(ToeicQuestion q) {
+        return ToeicQuestionDto.builder()
+                .id(q.getId())
+                .questionNumber(q.getQuestionNumber())
+                .questionText(q.getQuestionText())
+                .optionA(q.getOptionA())
+                .optionB(q.getOptionB())
+                .optionC(q.getOptionC())
+                .optionD(q.getOptionD())
+                .explanation(q.getExplanation())
                 .build();
     }
 
