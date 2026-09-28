@@ -11,7 +11,8 @@ import {
   XCircle,
   Clock,
   Sparkles,
-  X
+  X,
+  History,
 } from 'lucide-react';
 
 interface ResultModalProps {
@@ -19,6 +20,7 @@ interface ResultModalProps {
   onClose: () => void;
   onRetry: () => void;
   onBackToTests: () => void;
+  onOpenHistory?: () => void;
 }
 
 export const ResultModal: React.FC<ResultModalProps> = ({
@@ -26,10 +28,13 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   onClose,
   onRetry,
   onBackToTests,
+  onOpenHistory,
 }) => {
   const [expandedSegment, setExpandedSegment] = useState<number | null>(null);
 
   if (!result) return null;
+
+  const segmentList = result.segmentResults || result.results || [];
 
   const rate = Number(result.accuracyRate);
   let gradeText = 'Cần cố gắng';
@@ -80,13 +85,44 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             </span>
           </div>
 
-          {/* Accuracy Big Number */}
-          <div className="py-2">
-            <span className="text-5xl font-black bg-gradient-to-r from-emerald-400 via-brand-300 to-indigo-300 bg-clip-text text-transparent">
-              {result.accuracyRate}%
-            </span>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Độ chính xác từ vựng</p>
-          </div>
+          {/* 2-Column Score Breakdown (Dictation % and TOEIC Questions Y/3) */}
+          {result.totalQuestions && result.totalQuestions > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+              {/* Column 1: Dictation % */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-slate-800 text-center shadow-lg">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Điểm Dictation
+                </span>
+                <span className="text-4xl font-black bg-gradient-to-r from-emerald-400 via-brand-300 to-indigo-300 bg-clip-text text-transparent">
+                  {result.accuracyRate}%
+                </span>
+                <p className="text-xs text-slate-400 mt-1 font-medium">
+                  Đúng {result.correctWords} / {result.totalWords} từ
+                </p>
+              </div>
+
+              {/* Column 2: TOEIC Questions Y/3 */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-950 border border-indigo-900/40 text-center shadow-lg">
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider block mb-1">
+                  Điểm Trắc Nghiệm ETS
+                </span>
+                <span className="text-4xl font-black text-white">
+                  {result.correctQuestions} <span className="text-2xl text-slate-400">/ {result.totalQuestions}</span>
+                </span>
+                <p className="text-xs text-indigo-300/80 mt-1 font-medium">
+                  Đúng {Math.round(((result.correctQuestions || 0) / result.totalQuestions) * 100)}% câu hỏi
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Single big score if no multiple choice questions */
+            <div className="py-2">
+              <span className="text-5xl font-black bg-gradient-to-r from-emerald-400 via-brand-300 to-indigo-300 bg-clip-text text-transparent">
+                {result.accuracyRate}%
+              </span>
+              <p className="text-xs text-slate-400 mt-1 font-medium">Độ chính xác từ vựng</p>
+            </div>
+          )}
         </div>
 
         {/* Stat Cards */}
@@ -122,6 +158,55 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           </div>
         </div>
 
+        {/* Detailed Breakdown for TOEIC Multiple-Choice Questions */}
+        {result.questionResults && result.questionResults.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-brand-400" />
+              <span>Chi tiết câu hỏi trắc nghiệm ETS ({result.correctQuestions}/{result.totalQuestions}):</span>
+            </h3>
+
+            <div className="space-y-2">
+              {result.questionResults.map((qRes) => (
+                <div
+                  key={qRes.questionId}
+                  className="p-3.5 rounded-xl glass-card border border-slate-800/80 flex flex-col gap-1.5 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-200">
+                      Câu {qRes.questionNumber}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-md font-bold text-[11px] border ${
+                        qRes.correct
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                      }`}
+                    >
+                      {qRes.correct ? 'ĐÚNG' : 'SAI'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-slate-300">
+                    <span>
+                      Bạn chọn: <strong className={qRes.correct ? 'text-emerald-400' : 'text-rose-400'}>{qRes.selectedOption || 'Không chọn'}</strong>
+                    </span>
+                    <span>
+                      Đáp án đúng: <strong className="text-emerald-400">{qRes.correctOption}</strong>
+                    </span>
+                  </div>
+
+                  {qRes.explanation && (
+                    <p className="text-slate-400 italic bg-slate-950/60 p-2 rounded-lg border border-slate-800/50 mt-1">
+                      Giải thích: {qRes.explanation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Detailed Breakdown per Segment */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -129,7 +214,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           </h3>
 
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {result.results.map((seg) => {
+            {segmentList.map((seg) => {
               const isExpanded = expandedSegment === seg.segmentId;
 
               return (
@@ -202,14 +287,27 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
         {/* Footer Actions */}
         <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onRetry}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl glass-card text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition-all flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Luyện tập lại</span>
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={onRetry}
+              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl glass-card text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition-all flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Luyện tập lại</span>
+            </button>
+
+            {onOpenHistory && (
+              <button
+                type="button"
+                onClick={onOpenHistory}
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-brand-300 hover:text-white hover:border-brand-500/50 hover:bg-brand-500/10 transition-all flex items-center justify-center gap-2"
+              >
+                <History className="w-3.5 h-3.5 text-brand-400" />
+                <span>Xem lịch sử</span>
+              </button>
+            )}
+          </div>
 
           <button
             type="button"

@@ -186,6 +186,10 @@ function DictationApp() {
         onClose={() => setStudyResult(null)}
         onRetry={handleRetry}
         onBackToTests={handleBackToTests}
+        onOpenHistory={() => {
+          setStudyResult(null);
+          setIsHistoryOpen(true);
+        }}
       />
 
       {/* History Drawer */}

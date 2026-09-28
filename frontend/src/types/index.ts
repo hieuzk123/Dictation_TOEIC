@@ -129,7 +129,7 @@ export interface WordResultDto {
   targetWord: string;
   userWord: string;
   isCorrect: boolean;
-  isKeyword: boolean;
+  isKeyword?: boolean;
 }
 
 export interface SegmentResultDto {
