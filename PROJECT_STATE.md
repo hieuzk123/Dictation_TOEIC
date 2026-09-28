@@ -232,12 +232,12 @@ Docker sẽ tự động kích hoạt cụm 3 containers: `mysql` (khởi tạo 
 # 1. Kiểm thử toàn bộ Backend & Đo lường JaCoCo Coverage:
 cd backend
 .\mvnw.cmd test
-# Xác nhận: 41/41 tests PASS, JaCoCo Line Coverage > 90%
+# Xác nhận: 44/44 tests PASS, JaCoCo Line Coverage > 90%
 
 # 2. Kiểm thử Unit Frontend (Vitest):
 cd ../frontend
 npm run test
-# Xác nhận: 23/23 tests PASS
+# Xác nhận: 41/41 tests PASS
 
 # 3. Kiểm thử Luồng người dùng E2E (Playwright Headless):
 npm run test:e2e
@@ -366,6 +366,9 @@ Thư mục dự kiến: `frontend/`
 | AUD-23 | Phase 7 Task 7.2: GlobalExceptionHandler Nuốt Mã Lỗi ResponseStatusException | Primary Agent (Task 7.2) | Auditor Agent | `GlobalExceptionHandler` ban đầu bắt chung `Exception.class` khiến các `ResponseStatusException` (vd 401 Invalid credentials, 404 Not Found) bị ép thành 500 Internal Server Error. | 🔴 Critical | Đã bổ sung handler tường minh `@ExceptionHandler(ResponseStatusException.class)` trả về đúng HTTP status code và message của ngoại lệ. Toàn bộ 39/39 tests backend pass. | ✅ PASS (Resolved) |
 | AUD-24 | Phase 7 Task 7.4: PowerShell BCrypt Dollar Escaping & FormData Headers | Primary Agent (Task 7.4) | Auditor Agent | 1. Khi insert tài khoản admin qua PowerShell CLI, ký tự `$` trong BCrypt hash bị parse thành biến môi trường rỗng. 2. `fetch()` trong `api.ts` đặt sẵn `Content-Type: application/json` làm hỏng multipart boundary của `FormData`. | 🔴 Critical | 1. Sao chép hash an toàn trực tiếp từ MySQL `SELECT password FROM users WHERE username='demo_user'`. 2. Kiểm tra `!(options.body instanceof FormData)` trong `api.ts` để trình duyệt tự sinh boundary multipart header. Đã test pass cả backend lẫn frontend. | ✅ PASS (Resolved) |
 | AUD-25 | Phase 7 User Feedback: Admin CMS Dynamic Test Creation & 50MB Multipart Limit | Primary Agent (Hotfix) | Auditor Agent | 1. Giao diện upload chỉ cho phép chọn đề có sẵn, không cho tạo đề ETS mới từ các năm khác. 2. Upload file audio 2.7MB bị lỗi `Failed to fetch` do Spring Boot mặc định `max-file-size: 1MB`, Tomcat cắt kết nối TCP giữa chừng. | 🔴 Critical | 1. Bổ sung `POST /api/admin/tests`, sub-form tạo đề thi ETS linh hoạt với preview tiêu đề tự động, hỗ trợ tạo đề on-the-fly khi upload. 2. Cấu hình `max-file-size: 50MB`, `max-request-size: 50MB`, `max-swallow-size: 50MB` và xử lý exception `MaxUploadSizeExceededException`. 41/41 backend tests & 23/23 frontend tests pass 100%. | ✅ PASS (Resolved) |
+| AUD-26 | Post-Launch UX Feedback: Cloze Tokens Inversion, Hard Mode Hints & ResultModal Map Crash | Primary Agent (Hotfix) | Auditor Agent | 1. Chế độ "Trung bình" không có ô đục lỗ do frontend đọc `token.isKeyword` (camelCase) trong khi backend trả về `is_keyword` (snake_case). 2. Chế độ "Nâng cao" hiện gợi ý chữ cái đầu `${tok.word.charAt(0)}...` làm mất thẩm mỹ. 3. Nộp bài bị crash ErrorBoundary `Cannot read properties of undefined (reading 'map')` do ResultModal gọi `result.results` thay vì `result.segmentResults`. | 🔴 Critical | 1. Đã hỗ trợ `is_keyword ?? isKeyword` trong `TokenItem` và `DictationPlayer`. 2. Gỡ bỏ hint chữ cái đầu, để placeholder trống `""`, cấu hình chế độ Khó đục lỗ ~75% câu. 3. Sửa `ResultModal` dùng fallback `segmentResults || results || []`, thêm nút "Xem lịch sử", thêm alias `@JsonProperty("results")` trong backend. 41/41 backend tests & 28/28 frontend tests pass 100%. | ✅ PASS (Resolved) |
+| AUD-27 | Practice Modes & ETS Multiple-Choice Architecture: Full-Passage Hard Mode, Cloze Density Selector & Admin CMS Quick-Paste | Primary Agent (Feature Upgrade) | Auditor Agent | Nâng cấp toàn diện trải nghiệm luyện tập theo yêu cầu học viên: 1. Chế độ Trung bình: Nghe xong 1 câu dừng lại bắt buộc người dùng điền đủ mới cho qua câu tiếp theo. 2. Chế độ Nâng cao: Hiển thị trọn vẹn transcript bài nghe trên 1 trang (`FullPassageDictation`), đục lỗ rải rác toàn bài kèm phát âm thanh liên tục và 3 câu hỏi trắc nghiệm ETS (A, B, C, D) bên dưới (bắt buộc trả lời đủ 3 câu mới nộp bài). 3. Tùy chỉnh mật độ đục lỗ: 3 nút chọn `[30%]`, `[50%]`, `[70%]` trên toolbar. 4. ResultModal hiển thị điểm kép 2 cột (Điểm Dictation % & Điểm Trắc nghiệm ETS Y/3) cùng danh sách giải thích chi tiết. 5. Admin CMS: Form 3 thẻ câu hỏi kèm tab Nhập nhanh văn bản bóc tách tự động bằng Regex. | 🔴 Critical | 1. Bổ sung bảng `toeic_questions` trong MySQL, entity `ToeicQuestion`, `ToeicQuestionRepository`. 2. Mở rộng `ToeicService`, `StudyService` (chấm điểm trắc nghiệm, lưu chi tiết vào `detailsJson`), `AdminContentService` (nhận `questionsJson`). 3. Frontend: Tạo `cloze.ts` (thuật toán đục lỗ 30/50/70% ưu tiên từ khóa), `ClozeDensitySelector.tsx`, `FullPassageDictation.tsx`, `questionParser.ts` (bóc tách regex). 4. Modal kết quả 2 cột điểm và giao diện Admin CMS upload 3 câu hỏi. 44/44 Backend tests & 41/41 Frontend Unit tests & 3/3 E2E tests PASS 100%. | ✅ PASS (Resolved) |
+
 
 
 
