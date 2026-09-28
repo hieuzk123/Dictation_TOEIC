@@ -52,7 +52,8 @@ public class AdminController {
             @RequestParam(value = "transcriptText", required = false) String transcriptText,
             @RequestParam(value = "newTestYear", required = false) String newTestYear,
             @RequestParam(value = "newTestNumber", required = false) Integer newTestNumber,
-            @RequestParam(value = "newTestTitle", required = false) String newTestTitle
+            @RequestParam(value = "newTestTitle", required = false) String newTestTitle,
+            @RequestParam(value = "questionsJson", required = false) String questionsJson
     ) throws IOException {
         AdminUploadResponse response = adminService.uploadAndCreateItem(
                 testId,
@@ -63,7 +64,8 @@ public class AdminController {
                 transcriptText,
                 newTestYear,
                 newTestNumber,
-                newTestTitle
+                newTestTitle,
+                questionsJson
         );
         return ResponseEntity.ok(response);
     }

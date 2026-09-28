@@ -181,5 +181,60 @@ class AdminControllerTests {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("POST /api/admin/items/upload with questionsJson should save ToeicQuestions")
+    void testAdminUploadWithQuestions() throws Exception {
+        MockMultipartFile audioFile = new MockMultipartFile(
+                "audioFile",
+                "test_questions.mp3",
+                "audio/mpeg",
+                "FAKE_AUDIO_BYTES_QUESTIONS".getBytes()
+        );
+
+        String sampleTranscript = "Good afternoon, this is a staff announcement. Please submit your timesheets by 5 PM.";
+        String questionsJson = """
+                [
+                    {
+                        "questionNumber": 71,
+                        "questionText": "What is the announcement about?",
+                        "optionA": "Submitting timesheets",
+                        "optionB": "Office cleaning",
+                        "optionC": "Holiday schedule",
+                        "optionD": "New health insurance",
+                        "correctOption": "A",
+                        "explanation": "Staff are asked to submit timesheets."
+                    }
+                ]
+                """;
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/admin/items/upload")
+                        .file(audioFile)
+                        .param("testId", testId.toString())
+                        .param("part", "4")
+                        .param("itemNumber", "71-73")
+                        .param("title", "Staff Timesheet Announcement")
+                        .param("transcriptText", sampleTranscript)
+                        .param("questionsJson", questionsJson)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemId").isNumber())
+                .andReturn();
+
+        long createdItemId = objectMapper.readTree(uploadResult.getResponse().getContentAsString()).get("itemId").asLong();
+
+        // Verify questions saved via GET /api/items/{id}
+        mockMvc.perform(get("/api/items/" + createdItemId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions", hasSize(1)))
+                .andExpect(jsonPath("$.questions[0].questionNumber").value(71))
+                .andExpect(jsonPath("$.questions[0].questionText").value("What is the announcement about?"));
+
+        // Cleanup
+        mockMvc.perform(delete("/api/admin/items/" + createdItemId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
 }
+
 

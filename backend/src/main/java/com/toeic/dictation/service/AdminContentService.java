@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.toeic.dictation.dto.AdminStatsResponse;
 import com.toeic.dictation.dto.AdminUploadResponse;
 import com.toeic.dictation.dto.CreateTestRequest;
+import com.toeic.dictation.dto.toeic.CreateQuestionRequest;
 import com.toeic.dictation.dto.toeic.ToeicTestDto;
 import com.toeic.dictation.model.AudioItem;
 import com.toeic.dictation.model.AudioSegment;
+import com.toeic.dictation.model.ToeicQuestion;
 import com.toeic.dictation.model.ToeicTest;
 import com.toeic.dictation.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class AdminContentService {
     private final ToeicTestRepository testRepository;
     private final AudioItemRepository itemRepository;
     private final AudioSegmentRepository segmentRepository;
+    private final ToeicQuestionRepository questionRepository;
     private final UserRepository userRepository;
     private final StudyHistoryRepository historyRepository;
     private final ObjectMapper objectMapper;
@@ -123,7 +126,7 @@ public class AdminContentService {
             MultipartFile audioFile,
             String transcriptText
     ) throws IOException {
-        return uploadAndCreateItem(testId, part, itemNumber, title, audioFile, transcriptText, null, null, null);
+        return uploadAndCreateItem(testId, part, itemNumber, title, audioFile, transcriptText, null, null, null, null);
     }
 
     @Transactional
@@ -137,6 +140,22 @@ public class AdminContentService {
             String newTestYear,
             Integer newTestNumber,
             String newTestTitle
+    ) throws IOException {
+        return uploadAndCreateItem(testId, part, itemNumber, title, audioFile, transcriptText, newTestYear, newTestNumber, newTestTitle, null);
+    }
+
+    @Transactional
+    public AdminUploadResponse uploadAndCreateItem(
+            Long testId,
+            Integer part,
+            String itemNumber,
+            String title,
+            MultipartFile audioFile,
+            String transcriptText,
+            String newTestYear,
+            Integer newTestNumber,
+            String newTestTitle,
+            String questionsJson
     ) throws IOException {
         if (part == null || (part != 3 && part != 4)) throw new IllegalArgumentException("part must be 3 or 4");
         if (itemNumber == null || itemNumber.trim().isEmpty()) throw new IllegalArgumentException("itemNumber is required");
@@ -264,6 +283,35 @@ public class AdminContentService {
             savedItem.getSegments().add(seg);
         }
         segmentRepository.saveAll(segments);
+
+        // 4. Save Questions if provided
+        if (questionsJson != null && !questionsJson.trim().isEmpty()) {
+            try {
+                List<CreateQuestionRequest> questionRequests = objectMapper.readValue(
+                        questionsJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<List<CreateQuestionRequest>>() {}
+                );
+                List<ToeicQuestion> questionsToSave = new ArrayList<>();
+                for (CreateQuestionRequest qReq : questionRequests) {
+                    questionsToSave.add(ToeicQuestion.builder()
+                            .item(savedItem)
+                            .questionNumber(qReq.getQuestionNumber())
+                            .questionText(qReq.getQuestionText())
+                            .optionA(qReq.getOptionA())
+                            .optionB(qReq.getOptionB())
+                            .optionC(qReq.getOptionC())
+                            .optionD(qReq.getOptionD())
+                            .correctOption(qReq.getCorrectOption() != null ? qReq.getCorrectOption().toUpperCase() : "A")
+                            .explanation(qReq.getExplanation())
+                            .build());
+                }
+                questionRepository.saveAll(questionsToSave);
+                log.info("Saved {} questions for item id: {}", questionsToSave.size(), savedItem.getId());
+            } catch (Exception e) {
+                log.error("Failed to parse or save questionsJson: {}", questionsJson, e);
+                throw new IllegalArgumentException("Định dạng câu hỏi trắc nghiệm không hợp lệ: " + e.getMessage());
+            }
+        }
 
         log.info("Created AudioItem id: {}, segments: {}, audioUrl: {}", savedItem.getId(), segments.size(), audioUrl);
 
