@@ -36,7 +36,7 @@ export interface ToeicTest {
   title: string;
   year: number;
   testNumber: number;
-  description: string;
+  description?: string;
   totalItems?: number;
 }
 
@@ -88,6 +88,17 @@ export interface ToeicQuestion {
   optionB: string;
   optionC: string;
   optionD: string;
+  explanation?: string;
+}
+
+export interface CreateQuestionRequest {
+  questionNumber: number;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: string;
   explanation?: string;
 }
 

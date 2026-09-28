@@ -112,5 +112,91 @@ describe('AdminCmsModal Component', () => {
       expect(screen.getByText('5')).toBeInTheDocument(); // totalUsers
     });
   });
+
+  it('switches to quick-paste tab, parses pasted questions, and populates form cards', async () => {
+    render(<AdminCmsModal isOpen={true} onClose={vi.fn()} />);
+
+    // Click on "Nhập nhanh văn bản"
+    const quickPasteBtn = screen.getByRole('button', { name: /Nhập nhanh văn bản/i });
+    fireEvent.click(quickPasteBtn);
+
+    const textarea = screen.getByPlaceholderText(/32\. Where does the conversation most likely take place/i);
+    expect(textarea).toBeInTheDocument();
+
+    const sampleText = `
+35. What is the speaker announcing?
+A. A flight delay
+B. A schedule change
+C. A promotion
+D. A company party
+Đáp án: B
+Giải thích: Speaker mentions the change in shift times.
+`;
+    fireEvent.change(textarea, { target: { value: sampleText } });
+
+    // Click "⚡ Bóc tách câu hỏi tự động"
+    const parseBtn = screen.getByRole('button', { name: /Bóc tách câu hỏi tự động/i });
+    fireEvent.click(parseBtn);
+
+    // After parsing, it should show success message and switch back to cards
+    await waitFor(() => {
+      expect(screen.getByText(/Đã bóc tách tự động thành công 1 câu hỏi/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue('What is the speaker announcing?')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('A schedule change')).toBeInTheDocument();
+  });
+
+  it('includes questionsJson in FormData when uploading item with questions', async () => {
+    vi.mocked(api.admin.uploadItem).mockResolvedValue({
+      itemId: 201,
+      title: 'Office Discussion',
+      audioUrl: '/audio/office.mp3',
+      totalSegments: 5,
+      message: 'Success',
+    });
+
+    render(<AdminCmsModal isOpen={true} onClose={vi.fn()} />);
+
+    // Wait for tests to load
+    await waitFor(() => {
+      expect(api.toeic.getTests).toHaveBeenCalled();
+    });
+
+    // Fill required fields
+    fireEvent.change(screen.getByPlaceholderText('35-37'), { target: { value: '32-34' } });
+    fireEvent.change(screen.getByPlaceholderText('Office Equipment Discussion'), {
+      target: { value: 'Office Discussion' },
+    });
+
+    // Provide a mock file
+    const file = new File(['dummy audio content'], 'audio.mp3', { type: 'audio/mp3' });
+    const fileInput = document.getElementById('audio-upload-input') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Fill Question 1 in the form
+    const q1Input = screen.getByPlaceholderText('Nội dung câu hỏi 32...');
+    fireEvent.change(q1Input, { target: { value: 'Where is the conversation taking place?' } });
+    fireEvent.change(screen.getAllByPlaceholderText('Lựa chọn A...')[0], { target: { value: 'At a bank' } });
+    fireEvent.change(screen.getAllByPlaceholderText('Lựa chọn B...')[0], { target: { value: 'At a store' } });
+    fireEvent.change(screen.getAllByPlaceholderText('Lựa chọn C...')[0], { target: { value: 'At a hotel' } });
+    fireEvent.change(screen.getAllByPlaceholderText('Lựa chọn D...')[0], { target: { value: 'At an airport' } });
+
+    // Submit form
+    const submitBtn = screen.getByRole('button', { name: /Tải lên & Khởi tạo Đề thi/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.admin.uploadItem).toHaveBeenCalled();
+    });
+
+    const formDataPassed = vi.mocked(api.admin.uploadItem).mock.calls[0][0];
+    expect(formDataPassed.get('itemNumber')).toBe('32-34');
+    expect(formDataPassed.get('title')).toBe('Office Discussion');
+    const questionsJson = formDataPassed.get('questionsJson') as string;
+    expect(questionsJson).toBeDefined();
+    expect(questionsJson).toContain('Where is the conversation taking place?');
+    expect(questionsJson).toContain('At a bank');
+  });
 });
 

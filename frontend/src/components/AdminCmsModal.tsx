@@ -16,9 +16,14 @@ import {
   Headphones,
   Plus,
   FolderPlus,
+  HelpCircle,
+  Sparkles,
+  ListPlus,
+  ClipboardPaste,
 } from 'lucide-react';
 import { api } from '../services/api';
-import type { ToeicTest, AudioItemSummary, AdminStats } from '../types';
+import type { ToeicTest, AudioItemSummary, AdminStats, CreateQuestionRequest } from '../types';
+import { parseQuickPasteQuestions } from '../utils/questionParser';
 
 interface AdminCmsModalProps {
   isOpen: boolean;
@@ -39,6 +44,15 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
   const [title, setTitle] = useState<string>('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [transcriptText, setTranscriptText] = useState<string>('');
+
+  // Questions state for ETS Multiple Choice (Hard mode)
+  const [questionsMode, setQuestionsMode] = useState<'cards' | 'quick-paste'>('cards');
+  const [quickPasteText, setQuickPasteText] = useState<string>('');
+  const [questions, setQuestions] = useState<CreateQuestionRequest[]>([
+    { questionNumber: 32, questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', explanation: '' },
+    { questionNumber: 33, questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', explanation: '' },
+    { questionNumber: 34, questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', explanation: '' },
+  ]);
 
   // New test creation state
   const [isCreatingNewTest, setIsCreatingNewTest] = useState<boolean>(false);
@@ -167,6 +181,42 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
     }
   };
 
+  const handleItemNumberChange = (val: string) => {
+    setItemNumber(val);
+    const match = val.match(/^(\d+)/);
+    if (match) {
+      const startNum = parseInt(match[1], 10);
+      setQuestions((prev) =>
+        prev.map((q, idx) => ({
+          ...q,
+          questionNumber: startNum + idx,
+        }))
+      );
+    }
+  };
+
+  const updateQuestionField = <K extends keyof CreateQuestionRequest>(
+    index: number,
+    field: K,
+    value: CreateQuestionRequest[K]
+  ) => {
+    setQuestions((prev) =>
+      prev.map((q, idx) => (idx === index ? { ...q, [field]: value } : q))
+    );
+  };
+
+  const handleParseQuickPaste = () => {
+    const parsed = parseQuickPasteQuestions(quickPasteText);
+    if (parsed.length === 0) {
+      setUploadError('Không tìm thấy câu hỏi hợp lệ trong văn bản dán nhanh. Vui lòng kiểm tra lại cấu trúc.');
+      return;
+    }
+    setQuestions(parsed);
+    setQuestionsMode('cards');
+    setUploadError(null);
+    setUploadSuccess(`Đã bóc tách tự động thành công ${parsed.length} câu hỏi!`);
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError(null);
@@ -193,6 +243,17 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
       return;
     }
 
+    // Validate questions if any question text is filled
+    const validQuestions = questions.filter((q) => q.questionText.trim().length > 0);
+    if (validQuestions.length > 0) {
+      for (const q of validQuestions) {
+        if (!q.optionA.trim() || !q.optionB.trim() || !q.optionC.trim() || !q.optionD.trim()) {
+          setUploadError(`Vui lòng điền đủ 4 đáp án A, B, C, D cho câu hỏi số ${q.questionNumber}.`);
+          return;
+        }
+      }
+    }
+
     try {
       setIsUploading(true);
       const formData = new FormData();
@@ -212,6 +273,11 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
       formData.append('audioFile', audioFile);
       formData.append('transcriptText', transcriptText.trim());
 
+      // Append questionsJson if provided
+      if (validQuestions.length > 0) {
+        formData.append('questionsJson', JSON.stringify(validQuestions));
+      }
+
       const res = await api.admin.uploadItem(formData);
       setUploadSuccess(`Đã tạo thành công bài nghe "${res.title}" với ${res.totalSegments} câu phân đoạn tự động!`);
       
@@ -221,6 +287,12 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
       setAudioFile(null);
       setTranscriptText('');
       setIsCreatingNewTest(false);
+      setQuestions([
+        { questionNumber: 32, questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', explanation: '' },
+        { questionNumber: 33, questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', explanation: '' },
+        { questionNumber: 34, questionText: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', explanation: '' },
+      ]);
+      setQuickPasteText('');
 
       loadStats();
       const updatedTests = await api.toeic.getTests();
@@ -510,7 +582,7 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
                   <input
                     type="text"
                     value={itemNumber}
-                    onChange={(e) => setItemNumber(e.target.value)}
+                    onChange={(e) => handleItemNumberChange(e.target.value)}
                     placeholder="35-37"
                     className="w-full px-3.5 py-2 rounded-xl glass-input text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                   />
@@ -585,6 +657,171 @@ export const AdminCmsModal: React.FC<AdminCmsModalProps> = ({
                   placeholder="Dán toàn bộ lời thoại hội thoại hoặc bài nói tại đây. Hệ thống sẽ tự động bóc tách từng câu, nhận diện từ khóa và sinh dữ liệu chép chính tả..."
                   className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono leading-relaxed"
                 />
+              </div>
+
+              {/* TOEIC ETS Multiple-Choice Questions (3 Questions for Hard Mode) */}
+              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4 text-indigo-400" />
+                      <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                        Câu hỏi trắc nghiệm ETS đính kèm (3 câu hỏi)
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        Chế độ Nâng cao
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Học viên làm bài ở chế độ Nâng cao sẽ trả lời 3 câu hỏi này sau khi nghe toàn bài
+                    </p>
+                  </div>
+
+                  {/* Sub-tabs: Form Cards vs Quick-Paste */}
+                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setQuestionsMode('cards')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 cursor-pointer ${
+                        questionsMode === 'cards'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <ListPlus className="w-3.5 h-3.5" />
+                      <span>Biểu mẫu 3 câu</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuestionsMode('quick-paste')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 cursor-pointer ${
+                        questionsMode === 'quick-paste'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <ClipboardPaste className="w-3.5 h-3.5" />
+                      <span>Nhập nhanh văn bản</span>
+                    </button>
+                  </div>
+                </div>
+
+                {questionsMode === 'quick-paste' ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] text-slate-300 font-medium">
+                        Dán văn bản câu hỏi định dạng ETS / sách luyện thi:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleParseQuickPaste}
+                        className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>⚡ Bóc tách câu hỏi tự động</span>
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={6}
+                      value={quickPasteText}
+                      onChange={(e) => setQuickPasteText(e.target.value)}
+                      placeholder={`32. Where does the conversation most likely take place?\nA. At a hotel\nB. At an office\nC. At a restaurant\nD. At an airport\nĐáp án: B\nGiải thích: Người phụ nữ nói về việc đặt phòng...`}
+                      className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs text-slate-200 font-mono leading-relaxed placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                    />
+                    <p className="text-[10px] text-slate-400 italic">
+                      Hỗ trợ định dạng "32. Câu hỏi", "A. Đáp án A", "Đáp án: B" và "Giải thích: ..."
+                    </p>
+                  </div>
+                ) : (
+                  /* 3-Card Visual Form */
+                  <div className="space-y-3">
+                    {questions.map((q, qIndex) => (
+                      <div
+                        key={qIndex}
+                        className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shrink-0">
+                            {qIndex + 1}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-300 shrink-0">
+                            Câu số:
+                          </span>
+                          <input
+                            type="number"
+                            value={q.questionNumber}
+                            onChange={(e) =>
+                              updateQuestionField(qIndex, 'questionNumber', parseInt(e.target.value) || 0)
+                            }
+                            className="w-16 px-2 py-1 rounded-lg glass-input text-xs text-slate-200 shrink-0"
+                          />
+                          <input
+                            type="text"
+                            value={q.questionText}
+                            onChange={(e) => updateQuestionField(qIndex, 'questionText', e.target.value)}
+                            placeholder={`Nội dung câu hỏi ${q.questionNumber}...`}
+                            className="flex-1 px-3 py-1 rounded-lg glass-input text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+
+                        {/* 4 Options Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {(['A', 'B', 'C', 'D'] as const).map((opt) => {
+                            const optField = `option${opt}` as keyof CreateQuestionRequest;
+                            const isCorrect = q.correctOption === opt;
+
+                            return (
+                              <div
+                                key={opt}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-colors ${
+                                  isCorrect
+                                    ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-200'
+                                    : 'bg-slate-900/60 border-slate-800'
+                                }`}
+                              >
+                                <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                                  <input
+                                    type="radio"
+                                    name={`correctOption-${qIndex}`}
+                                    checked={isCorrect}
+                                    onChange={() => updateQuestionField(qIndex, 'correctOption', opt)}
+                                    className="accent-emerald-500 cursor-pointer"
+                                  />
+                                  <span
+                                    className={`text-xs font-bold ${
+                                      isCorrect ? 'text-emerald-400' : 'text-slate-400'
+                                    }`}
+                                  >
+                                    {opt}
+                                  </span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={(q[optField] as string) || ''}
+                                  onChange={(e) => updateQuestionField(qIndex, optField, e.target.value)}
+                                  placeholder={`Lựa chọn ${opt}...`}
+                                  className="flex-1 bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Explanation */}
+                        <div>
+                          <input
+                            type="text"
+                            value={q.explanation || ''}
+                            onChange={(e) => updateQuestionField(qIndex, 'explanation', e.target.value)}
+                            placeholder="Giải thích đáp án (tùy chọn)..."
+                            className="w-full px-3 py-1 rounded-lg glass-input text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Submit Button */}
