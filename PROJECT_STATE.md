@@ -55,22 +55,24 @@ Dự án đã được thiết kế và hoàn thiện toàn diện ở mức **P
 * **Mô hình AI**: Sử dụng `faster-whisper` (`base` model, int8 quantization) nhận diện chính xác mốc thời gian (start/end timestamp) của từng câu và từng từ.
 * **Bộ lọc từ vựng thông minh**: Tự động lọc từ chức năng (Stopwords) để gắn nhãn `is_keyword: true/false` cho từng token từ vựng, phục vụ cơ chế đục lỗ Cloze Test.
 * **Audio chuẩn bản ngữ**: Tích hợp Microsoft Azure Neural TTS (`edge-tts`) tạo âm thanh Part 3 (`en-US-JennyNeural` & `en-US-GuyNeural`) và Part 4 (`en-US-AriaNeural`).
-* **Database Schema**: 5 bảng chuẩn hóa MySQL (`users`, `toeic_tests`, `audio_items`, `audio_segments`, `study_histories`).
-* **Seed Data**: Đề thi `ETS 2024 - Test 1`, 2 bài nghe (Q32-34 & Q71-73), 12 segments kèm tokens JSON, và 2 tài khoản mẫu đã hash BCrypt: `demo_user` (ROLE_USER) và `admin` (ROLE_ADMIN).
+* **Database Schema**: 6 bảng chuẩn hóa MySQL (`users`, `toeic_tests`, `audio_items`, `audio_segments`, `toeic_questions`, `study_histories`).
+* **Seed Data**: Đề thi `ETS 2024 - Test 1`, 2 bài nghe (Q32-34 & Q71-73), 12 segments kèm tokens JSON, 6 câu hỏi trắc nghiệm ETS và 2 tài khoản mẫu đã hash BCrypt: `demo_user` (ROLE_USER) và `admin` (ROLE_ADMIN).
 
 ### ☕ Giai đoạn 2: Backend Spring Boot 3 Core APIs & Security
 * **Bảo mật & Phân quyền**: Spring Security 6, kiến trúc Stateless REST API, JWT Authentication (HMAC-SHA512). Phân quyền RBAC chặt chẽ giữa `ROLE_USER` và `ROLE_ADMIN`.
-* **Tối ưu hóa Database (JPA)**: Thiết lập quan hệ `FetchType.LAZY`, `@JsonIgnore` trên quan hệ ngược, truy vấn JPQL `findByIdWithSegments` dùng `LEFT JOIN FETCH` loại bỏ triệt để vấn đề N+1 query.
+* **Tối ưu hóa Database (JPA)**: Thiết lập quan hệ `FetchType.LAZY`, `@JsonIgnore` trên quan hệ ngược, truy vấn JPQL `findByIdWithSegments` dùng `LEFT JOIN FETCH` loại bỏ triệt để vấn đề N+1 query. Tích hợp `ToeicQuestionRepository` truy vấn 3 câu hỏi ETS theo bài nghe.
 * **Audio Streaming**: Static resource handler phân giải an toàn cross-platform đường dẫn thư mục `data_pipeline/sample_data/` sang URI tuyệt đối chuẩn xác qua endpoint `/audio/**`.
-* **Thuật toán Chấm điểm**: So khớp chuỗi ký tự theo chuẩn hóa chữ thường, loại bỏ dấu câu, tính toán tỷ lệ chính xác `accuracyRate`, phân loại từ sai/đúng và ghi nhận lịch sử học tập tức thì.
+* **Thuật toán Chấm điểm Kép**: Chấm điểm từ vựng Dictation song song với chấm điểm trắc nghiệm ETS, lưu trữ đáp án và chi tiết từng câu vào `detailsJson`, trả về tỷ lệ chính xác tức thì.
 
-### ⚛️ Giai đoạn 3: Frontend React 18 + Vite + Tailwind CSS
+### ⚛️ Giai đoạn 3: Frontend React 18 + Vite + Tailwind CSS & Kiến trúc Luyện tập Mới
 * **Design System Glassmorphism**: Tone màu EdTech sang trọng (Dark Slate-950, Emerald, Indigo, Purple), hiệu ứng làm mờ nền (backdrop blur) và border bóng kính cao cấp.
-* **Audio Engine Chuyên biệt**: Hook `useAudioSegmentPlayer` kẹp cứng giới hạn tua trong phạm vi segment `[startTime, endTime]`, tự động loop câu hoặc chuyển câu.
-* **Dictation Workspace**: 3 chế độ luyện tập:
-  * *Medium*: Đục lỗ các từ khóa chính (`is_keyword: true`).
-  * *Hard*: Đục lỗ toàn bộ các từ trong câu.
-  * *Full Sentence*: Luyện nghe và gõ toàn bộ câu tiếng Anh.
+* **Audio Engine Chuyên biệt**: Hook `useAudioSegmentPlayer` kẹp cứng giới hạn tua trong phạm vi segment `[startTime, endTime]`, hỗ trợ cả chế độ phân đoạn và phát liên tục toàn bài (Full Passage).
+* **Kiến trúc Chế độ Luyện tập**:
+  * *Medium (Trung bình)*: Luyện nghe từng câu, đục lỗ theo mật độ tùy chọn. Cơ chế Nghe - Dừng câu nghiêm ngặt: khi phát hết câu, audio tự động dừng chờ học viên điền và kiểm tra trước khi chuyển câu.
+  * *Hard (Nâng cao - `FullPassageDictation`)*: Toàn bộ bài nghe trên 1 trang duy nhất, đục lỗ rải rác toàn bài, phát audio toàn bài liên tục (tua thời gian, chỉnh tốc độ 0.8x - 1.2x) và tích hợp **3 câu hỏi trắc nghiệm ETS (A, B, C, D)** bên dưới bài nghe (bắt buộc trả lời đủ 3 câu mới nộp bài).
+  * *Full Sentence (Cả câu)*: Luyện nghe và gõ toàn bộ câu tiếng Anh.
+* **Bộ chọn mật độ đục lỗ (`ClozeDensitySelector`)**: 3 nút chọn `[30%]`, `[50%]`, `[70%]` ưu tiên từ khóa, ô đục lỗ trống hoàn toàn (`placeholder=""`).
+* **Bảng kết quả điểm kép (`ResultModal`)**: Hiển thị 2 cột điểm độc lập (Điểm Dictation % và Điểm Trắc nghiệm ETS Y/3) cùng review chi tiết từng câu.
 * **Hệ thống Phím tắt (Hotkeys)**: `Space` / `Ctrl+Space` (Phát/Tạm dừng), `Enter` (Kiểm tra / Câu kế tiếp), `Ctrl+R` (Nghe lại câu), `Tab` (Chuyển nhanh giữa các ô input đục lỗ). Tự động nhận diện khi người dùng đang nhập text để không bị nuốt khoảng trắng.
 
 ### 🛡️ Giai đoạn 4: Độ bền Sản phẩm & Bảo mật Nâng cao (Product Resilience)
@@ -80,7 +82,8 @@ Dự án đã được thiết kế và hoàn thiện toàn diện ở mức **P
 * **Tìm kiếm & Phân trang**: Thanh tìm kiếm debounce theo tiêu đề hoặc mã câu (vd: 32-34), tabs lọc Part 3/Part 4 và phân trang responsive.
 
 ### 🧪 Giai đoạn 5: Đo lường Chất lượng & Testing (Quality Engineering)
-* **Unit Tests (Vitest)**: 23 unit tests cho các component cốt lõi (`DictationPlayer`, `AudioPlayerBar`, `AdminCmsModal`, `ErrorBoundary`, `storage`).
+* **Unit Tests (Vitest)**: 41 unit tests (9 test files) bao phủ toàn bộ các components và utilities (`FullPassageDictation`, `DictationPlayer`, `AudioPlayerBar`, `AdminCmsModal`, `ResultModal`, `ErrorBoundary`, `storage`, `cloze`, `questionParser`).
+* **Backend Unit & Integration Tests**: 44 tests kiểm thử toàn diện Controller, Service, Repository, Security và chấm điểm câu hỏi trắc nghiệm ETS.
 * **E2E Tests (Playwright)**: 3 kịch bản kiểm thử luồng người dùng giả lập ngoại tuyến với API Route Mocking.
 * **Độ phủ Mã nguồn Backend**: JaCoCo Code Coverage đạt **> 90% Line Coverage**.
 * **Pre-commit Quality Gate (Husky)**: Tự động chạy TypeScript check, Vitest suite và Oxlint trước mọi commit.
@@ -99,6 +102,7 @@ Dự án đã được thiết kế và hoàn thiện toàn diện ở mức **P
   * Upload file MP3 kéo thả (Drag & Drop), bóc tách transcript tự động thành các câu và sinh tokens đục lỗ.
   * Hỗ trợ giới hạn upload **50MB** (cấu hình multipart và tomcat max-swallow-size).
   * **Tạo đề thi mới linh hoạt**: Cho phép giáo viên tạo đề thi ETS cho mọi năm (2022, 2023, 2025...) trực tiếp trên giao diện web hoặc tạo tự động khi upload.
+  * **Đính kèm 3 câu hỏi trắc nghiệm ETS**: Form trực quan 3 thẻ câu hỏi kèm tính năng **⚡ Bóc tách câu hỏi tự động (Quick-Paste Regex)** từ văn bản thô theo chuẩn ETS.
   * Xem 5 chỉ số thống kê hệ thống và quản lý xóa bài nghe.
 
 
@@ -123,19 +127,19 @@ Dictation_TOEIC/
 │   └── backup_mysql.sh             # Script sao lưu tự động MySQL trên Linux/Docker
 │
 ├── database/                       # Cấu trúc và dữ liệu Database
-│   ├── schema.sql                  # DDL tạo 5 bảng cơ sở dữ liệu
-│   └── seed_data.sql               # Dữ liệu mẫu (tests, items, segments, demo_user, admin)
+│   ├── schema.sql                  # DDL tạo 6 bảng cơ sở dữ liệu (tests, items, segments, questions, users, histories)
+│   └── seed_data.sql               # Dữ liệu mẫu (tests, items, segments, 6 questions ETS, demo_user, admin)
 │
 ├── backend/                        # Ứng dụng Backend Spring Boot 3 (Java 21)
 │   ├── pom.xml                     # Maven dependencies (Security, JPA, Actuator, Prometheus, JaCoCo)
 │   ├── Dockerfile                  # Container đóng gói Eclipse Temurin 21 JRE
-│   └── src/                        # Mã nguồn Java (Auth, Admin, Study, Toeic, Actuator, Exception)
+│   └── src/                        # Mã nguồn Java (Auth, Admin, Study, Toeic, Questions, Actuator, Exception)
 │
 ├── frontend/                       # Ứng dụng Frontend React 18 + Vite + Tailwind CSS
 │   ├── package.json                # Dependencies React, Lucide, Tailwind, Vitest, Playwright
 │   ├── Dockerfile                  # Multi-stage Dockerfile (Node 22 build + Nginx Alpine)
 │   ├── nginx.conf                  # Nginx reverse proxy (/api, /audio) và SPA routing
-│   └── src/                        # Mã nguồn React (DictationPlayer, AdminCmsModal, ErrorBoundary)
+│   └── src/                        # Mã nguồn React (DictationPlayer, FullPassageDictation, ClozeDensitySelector, AdminCmsModal, ResultModal, ErrorBoundary)
 │
 └── data_pipeline/                  # Tool xử lý dữ liệu Audio & Timestamp
     ├── align_pipeline.py           # Pipeline Whisper trích xuất timestamp và gắn nhãn keyword
@@ -279,7 +283,7 @@ Khi backend đang hoạt động, bạn có thể kiểm tra trực tiếp:
 ### 🤖 Bước 6: Cách ra lệnh cho AI Agent trên máy mới để KHÔNG làm sai tiến trình
 
 Khi bạn mở dự án trên IDE ở máy mới (hoặc bắt đầu session mới với AI), hãy copy & paste câu lệnh tiêu chuẩn sau vào ô chat:
-> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án TOEIC Dictation đã hoàn thành 100% trọn vẹn toàn bộ 7 Giai đoạn từ Giai đoạn 1 đến Giai đoạn 7 (Data Pipeline, Backend Spring Boot 3 & 41 Tests, Frontend React 18 & 23 Unit Tests + 3 E2E Tests, Product Resilience & JWT Rotation, Testing & JaCoCo >90% Coverage, DevOps Multi-stage Docker Compose & CI/CD, và Vận hành Giám sát Actuator/Prometheus, Sentry, MySQL Backup, Admin CMS Upload MP3 50MB & Tạo đề thi mới mọi năm). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và hỗ trợ mở rộng, bảo trì hoặc phát triển tính năng mới theo yêu cầu."*
+> *"Hãy đọc kỹ file `PROJECT_STATE.md`. Hiện tại dự án TOEIC Dictation đã hoàn thành 100% trọn vẹn toàn bộ 7 Giai đoạn từ Giai đoạn 1 đến Giai đoạn 7 cùng Kiến trúc Chế độ luyện tập nâng cao (Data Pipeline, Backend Spring Boot 3 & 44 Tests, Frontend React 18 & 41 Unit Tests + 3 E2E Tests, Chế độ Trung bình Stop-at-sentence, Chế độ Nâng cao Full-Passage kèm 3 câu hỏi trắc nghiệm ETS, Bộ chọn mật độ đục lỗ 30%/50%/70%, Bảng kết quả điểm kép 2 cột, và Admin CMS Upload MP3 50MB + bóc tách Regex câu hỏi tự động). Hãy tuân thủ nghiêm ngặt Quy chuẩn Đa tác tử (Multi-Agent Quality Protocol) ở Mục 2, đối soát bảng lỗi ở Mục 7 và hỗ trợ mở rộng, bảo trì hoặc phát triển tính năng mới theo yêu cầu."*
 
 
 ---
