@@ -16,7 +16,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -180,4 +182,39 @@ public class StudyControllerTests {
         mockMvc.perform(get("/api/study/history/1"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @DisplayName("Submit study in HARD mode with multiple choice question answers should score both dictation and questions")
+    void testSubmitStudyWithQuestionAnswers() throws Exception {
+        Map<Long, String> questionAnswers = new HashMap<>();
+        // Item 1 has questions 32(A), 33(B), 34(A) with ids 1, 2, 3
+        questionAnswers.put(1L, "A"); // correct
+        questionAnswers.put(2L, "B"); // correct
+        questionAnswers.put(3L, "C"); // incorrect (correct is A)
+
+        SubmitStudyRequest req = SubmitStudyRequest.builder()
+                .itemId(1L)
+                .mode("HARD")
+                .replaysCount(2)
+                .questionAnswers(questionAnswers)
+                .build();
+
+        mockMvc.perform(post("/api/study/submit")
+                .header("Authorization", "Bearer " + authToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalQuestions").value(3))
+                .andExpect(jsonPath("$.correctQuestions").value(2))
+                .andExpect(jsonPath("$.questionResults", hasSize(3)))
+                .andExpect(jsonPath("$.questionResults[0].questionNumber").value(32))
+                .andExpect(jsonPath("$.questionResults[0].selectedOption").value("A"))
+                .andExpect(jsonPath("$.questionResults[0].correctOption").value("A"))
+                .andExpect(jsonPath("$.questionResults[0].correct").value(true))
+                .andExpect(jsonPath("$.questionResults[2].questionNumber").value(34))
+                .andExpect(jsonPath("$.questionResults[2].selectedOption").value("C"))
+                .andExpect(jsonPath("$.questionResults[2].correctOption").value("A"))
+                .andExpect(jsonPath("$.questionResults[2].correct").value(false));
+    }
 }
+

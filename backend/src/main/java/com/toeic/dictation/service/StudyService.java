@@ -6,10 +6,12 @@ import com.toeic.dictation.dto.study.*;
 import com.toeic.dictation.model.AudioItem;
 import com.toeic.dictation.model.AudioSegment;
 import com.toeic.dictation.model.StudyHistory;
+import com.toeic.dictation.model.ToeicQuestion;
 import com.toeic.dictation.model.User;
 import com.toeic.dictation.repository.AudioItemRepository;
 import com.toeic.dictation.repository.AudioSegmentRepository;
 import com.toeic.dictation.repository.StudyHistoryRepository;
+import com.toeic.dictation.repository.ToeicQuestionRepository;
 import com.toeic.dictation.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ public class StudyService {
     private final StudyHistoryRepository studyHistoryRepository;
     private final AudioItemRepository audioItemRepository;
     private final AudioSegmentRepository audioSegmentRepository;
+    private final ToeicQuestionRepository toeicQuestionRepository;
     private final UserRepository userRepository;
     private final DictationScoringService scoringService;
     private final ObjectMapper objectMapper;
@@ -128,11 +131,36 @@ public class StudyService {
                     .build());
         }
 
+        // Multiple-choice questions scoring
+        List<ToeicQuestion> questions = toeicQuestionRepository.findByItemIdOrderByQuestionNumberAsc(item.getId());
+        List<QuestionResultDto> questionResults = new ArrayList<>();
+        int correctQuestions = 0;
+        Map<Long, String> userQAnswers = request.getQuestionAnswers() != null ? request.getQuestionAnswers() : Collections.emptyMap();
+
+        for (ToeicQuestion q : questions) {
+            String userOpt = userQAnswers.get(q.getId());
+            boolean isCorrect = userOpt != null && userOpt.trim().equalsIgnoreCase(q.getCorrectOption().trim());
+            if (isCorrect) {
+                correctQuestions++;
+            }
+            questionResults.add(QuestionResultDto.builder()
+                    .questionId(q.getId())
+                    .questionNumber(q.getQuestionNumber())
+                    .selectedOption(userOpt)
+                    .correctOption(q.getCorrectOption())
+                    .correct(isCorrect)
+                    .explanation(q.getExplanation())
+                    .build());
+        }
+
         BigDecimal accuracyRate = scoringService.calculateAccuracy(grandCorrectWords, grandTotalWords);
 
         String detailsJson = null;
         try {
-            detailsJson = objectMapper.writeValueAsString(segmentResults);
+            Map<String, Object> detailsMap = new HashMap<>();
+            detailsMap.put("segmentResults", segmentResults);
+            detailsMap.put("questionResults", questionResults);
+            detailsJson = objectMapper.writeValueAsString(detailsMap);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize detailsJson", e);
         }
@@ -158,7 +186,10 @@ public class StudyService {
                 .correctWords(grandCorrectWords)
                 .wrongSegmentsCount(wrongSegmentsCount)
                 .replaysCount(history.getReplaysCount())
+                .totalQuestions(questions.size())
+                .correctQuestions(correctQuestions)
                 .segmentResults(segmentResults)
+                .questionResults(questionResults)
                 .build();
     }
 

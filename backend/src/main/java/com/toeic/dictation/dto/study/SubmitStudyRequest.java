@@ -5,7 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -25,4 +27,7 @@ public class SubmitStudyRequest {
 
     @Builder.Default
     private List<SegmentAnswerDto> answers = new ArrayList<>();
+
+    @Builder.Default
+    private Map<Long, String> questionAnswers = new HashMap<>();
 }
