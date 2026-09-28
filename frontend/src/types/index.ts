@@ -41,10 +41,14 @@ export interface ToeicTest {
 }
 
 export interface TokenItem {
+  raw?: string;
   word: string;
-  start: number;
-  end: number;
-  isKeyword: boolean;
+  start?: number;
+  start_time?: number;
+  end?: number;
+  end_time?: number;
+  isKeyword?: boolean;
+  is_keyword?: boolean;
 }
 
 export interface AudioSegment {
@@ -73,6 +77,27 @@ export interface AudioItemSummary {
 
 export interface AudioItemDetail extends AudioItemSummary {
   segments: AudioSegment[];
+  questions?: ToeicQuestion[];
+}
+
+export interface ToeicQuestion {
+  id: number;
+  questionNumber: number;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  explanation?: string;
+}
+
+export interface QuestionResultDto {
+  questionId: number;
+  questionNumber: number;
+  selectedOption?: string;
+  correctOption: string;
+  correct: boolean;
+  explanation?: string;
 }
 
 export interface WordAnswerDto {
@@ -89,11 +114,14 @@ export interface SegmentAnswerDto {
 
 export type DictationMode = 'MEDIUM' | 'HARD' | 'FULL_SENTENCE';
 
+export type ClozeDensity = 30 | 50 | 70;
+
 export interface SubmitStudyRequest {
   itemId: number;
   mode: DictationMode;
   replaysCount: number;
   answers: SegmentAnswerDto[];
+  questionAnswers?: Record<number, string>;
 }
 
 export interface WordResultDto {
@@ -123,8 +151,12 @@ export interface SubmitStudyResponse {
   correctWords: number;
   replaysCount: number;
   wrongSegmentsCount: number;
-  completedAt: string;
-  results: SegmentResultDto[];
+  completedAt?: string;
+  totalQuestions?: number;
+  correctQuestions?: number;
+  questionResults?: QuestionResultDto[];
+  segmentResults?: SegmentResultDto[];
+  results?: SegmentResultDto[];
 }
 
 export interface StudyHistory {

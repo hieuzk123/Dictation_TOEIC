@@ -84,4 +84,24 @@ export const storage = {
   setOnboardingSeen: (): void => {
     localStorage.setItem('toeic_onboarding_seen', 'true');
   },
+
+  getClozeDensity: (): 30 | 50 | 70 => {
+    try {
+      const val = localStorage.getItem('toeic_cloze_density');
+      if (val === '30' || val === '50' || val === '70') {
+        return Number(val) as 30 | 50 | 70;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 50;
+  },
+
+  setClozeDensity: (density: 30 | 50 | 70): void => {
+    try {
+      localStorage.setItem('toeic_cloze_density', String(density));
+    } catch (e) {
+      // ignore
+    }
+  },
 };

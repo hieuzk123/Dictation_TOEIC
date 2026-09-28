@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { AudioItemDetail, DictationMode, SubmitStudyRequest, SegmentAnswerDto, WordAnswerDto } from '../types';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { AudioItemDetail, DictationMode, SubmitStudyRequest, SegmentAnswerDto, WordAnswerDto, ClozeDensity } from '../types';
 import { useAudioSegmentPlayer } from '../hooks/useAudioSegmentPlayer';
 import { AudioPlayerBar } from './AudioPlayerBar';
 import { ModeSelector } from './ModeSelector';
 import { SegmentNav } from './SegmentNav';
+import { ClozeDensitySelector } from './ClozeDensitySelector';
+import { FullPassageDictation } from './FullPassageDictation';
+import { calculateBlankIndices } from '../utils/cloze';
 import { storage } from '../services/storage';
 import {
   Eye,
@@ -32,11 +35,25 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
 }) => {
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(0);
   const [mode, setMode] = useState<DictationMode>('MEDIUM');
+  const [clozeDensity, setClozeDensity] = useState<ClozeDensity>(() => storage.getClozeDensity());
+  const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({});
   const [userInputs, setUserInputs] = useState<Record<number, Record<number, string>>>({});
   const [fullTextInputs, setFullTextInputs] = useState<Record<number, string>>({});
   const [checkedSegmentIds, setCheckedSegmentIds] = useState<Set<number>>(new Set());
   const [revealedSegmentIds, setRevealedSegmentIds] = useState<Set<number>>(new Set());
   const [draftSavedTime, setDraftSavedTime] = useState<string | null>(null);
+
+  const handleDensityChange = (d: ClozeDensity) => {
+    setClozeDensity(d);
+    storage.setClozeDensity(d);
+  };
+
+  const handleQuestionAnswer = (questionId: number, option: string) => {
+    setQuestionAnswers((prev) => ({
+      ...prev,
+      [questionId]: option,
+    }));
+  };
 
   // Initialize from LocalStorage draft if exists
   useEffect(() => {
@@ -128,19 +145,47 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
     return w.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
   };
 
+  // Precompute blank indices for currentSegment in Medium mode
+  const currentSegmentBlankIndices = useMemo(() => {
+    if (!currentSegment || !currentSegment.tokens) return new Set<number>();
+    return calculateBlankIndices(currentSegment.tokens, clozeDensity);
+  }, [currentSegment, clozeDensity]);
+
   // Determine if a token should be blanked based on current mode
   const isTokenBlank = useCallback(
-    (token: { isKeyword: boolean }, wordIndex: number): boolean => {
-      if (mode === 'MEDIUM') {
-        return token.isKeyword;
-      }
-      if (mode === 'HARD') {
-        return token.isKeyword || wordIndex % 2 === 0;
-      }
-      return true; // FULL_SENTENCE mode
+    (_token: { isKeyword?: boolean; is_keyword?: boolean }, wordIndex: number): boolean => {
+      if (mode === 'FULL_SENTENCE') return true;
+      return currentSegmentBlankIndices.has(wordIndex);
     },
-    [mode]
+    [mode, currentSegmentBlankIndices]
   );
+
+  const handleFinishHardMode = () => {
+    const answers: SegmentAnswerDto[] = item.segments.map((seg) => {
+      const segAnswers = userInputs[seg.id] || {};
+      const wordAnswers: WordAnswerDto[] = (seg.tokens || []).map((tok, idx) => ({
+        wordIndex: idx,
+        targetWord: tok.word,
+        userWord: segAnswers[idx] || '',
+      }));
+      return {
+        segmentId: seg.id,
+        wordAnswers,
+      };
+    });
+
+    const submission: SubmitStudyRequest = {
+      itemId: item.id,
+      mode: 'HARD',
+      replaysCount: replayCount,
+      answers,
+      questionAnswers,
+    };
+
+    storage.clearDraft(item.id);
+    onFinishSession(submission);
+  };
+
 
   // Focus the first input field on segment switch
   const firstInputRef = useRef<HTMLInputElement | null>(null);
@@ -301,6 +346,26 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
     });
   }
 
+  if (mode === 'HARD') {
+    return (
+      <FullPassageDictation
+        item={item}
+        clozeDensity={clozeDensity}
+        onChangeDensity={handleDensityChange}
+        userInputs={userInputs}
+        onChangeWord={handleWordChange}
+        questionAnswers={questionAnswers}
+        onChangeQuestionAnswer={handleQuestionAnswer}
+        onSubmit={handleFinishHardMode}
+        onBack={onBack}
+        onOpenShortcuts={onOpenShortcuts}
+        modeSelectorNode={
+          <ModeSelector currentMode={mode} onChangeMode={setMode} disabled={isChecked} />
+        }
+      />
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
       {/* Top Bar: Back, Shortcuts, Auto-save Badge & Mode Selector */}
@@ -327,7 +392,7 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {draftSavedTime && (
             <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-400 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Tự động lưu vào trình duyệt"></span>
@@ -342,6 +407,14 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
                 <span className="hidden md:inline">Làm lại</span>
               </button>
             </div>
+          )}
+
+          {mode !== 'FULL_SENTENCE' && (
+            <ClozeDensitySelector
+              density={clozeDensity}
+              onChangeDensity={handleDensityChange}
+              disabled={isChecked}
+            />
           )}
 
           <ModeSelector currentMode={mode} onChangeMode={setMode} disabled={isChecked} />
@@ -467,7 +540,7 @@ export const DictationPlayer: React.FC<DictationPlayerProps> = ({
                     type="text"
                     value={typedVal}
                     onChange={(e) => handleWordChange(currentSegment.id, idx, e.target.value)}
-                    placeholder={mode === 'HARD' ? `${tok.word.charAt(0)}...` : '___'}
+                    placeholder=""
                     style={{ width: `${Math.max(tok.word.length * 14 + 16, 56)}px` }}
                     className={`px-2.5 py-1 text-center rounded-xl text-sm font-semibold transition-all shadow-sm ${
                       isChecked

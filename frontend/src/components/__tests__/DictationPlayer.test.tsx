@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { DictationPlayer } from '../DictationPlayer';
 import type { AudioItemDetail } from '../../types';
 
@@ -141,5 +142,77 @@ describe('DictationPlayer Component', () => {
     const backBtn = screen.getByText(/Chọn bài khác/);
     fireEvent.click(backBtn);
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('correctly blanks keywords in MEDIUM mode when tokens use snake_case is_keyword', () => {
+    const snakeCaseItem: AudioItemDetail = {
+      ...mockItem,
+      segments: [
+        {
+          ...mockItem.segments[0],
+          tokens: [
+            { word: 'Mark', is_keyword: true } as any,
+            { word: 'did', is_keyword: false } as any,
+            { word: 'order', is_keyword: true } as any,
+          ],
+        },
+      ],
+    };
+
+    render(
+      <DictationPlayer
+        item={snakeCaseItem}
+        onFinishSession={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    // Stopword 'did' should be visible text
+    expect(screen.getByText('did')).toBeInTheDocument();
+    // Keywords 'Mark' and 'order' should be inputs, not static text spans
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs.length).toBe(2);
+    // Placeholder should be empty string
+    expect(inputs[0]).toHaveAttribute('placeholder', '');
+  });
+
+  it('blanks words in HARD mode without first-letter hint placeholders', () => {
+    render(
+      <DictationPlayer
+        item={mockItem}
+        onFinishSession={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    const hardBtn = screen.getByText('Nâng cao');
+    fireEvent.click(hardBtn);
+
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs.length).toBeGreaterThanOrEqual(3);
+    inputs.forEach((input: HTMLElement) => {
+      expect(input).toHaveAttribute('placeholder', '');
+    });
+  });
+
+  it('allows changing cloze density between 30%, 50%, and 70%', () => {
+    render(
+      <DictationPlayer
+        item={mockItem}
+        onFinishSession={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    const btn30 = screen.getByRole('button', { name: '30%' });
+    const btn70 = screen.getByRole('button', { name: '70%' });
+    expect(btn30).toBeInTheDocument();
+    expect(btn70).toBeInTheDocument();
+
+    fireEvent.click(btn30);
+    expect(btn30).toHaveClass('bg-brand-500');
+
+    fireEvent.click(btn70);
+    expect(btn70).toHaveClass('bg-brand-500');
   });
 });
